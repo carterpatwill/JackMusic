@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invest — Quigley Discovery</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  .invest-page { padding-top: 64px; padding-bottom: 96px; max-width: 900px; }
+  .invest-hero { position: relative; border-radius: 20px; overflow: hidden; border: 2px solid var(--accent); margin-bottom: 40px; }
+  .invest-hero .inner { position: relative; z-index: 1; padding: 40px; display: flex; flex-direction: column; gap: 12px; }
+  .invest-hero h1 { margin: 0; font-size: clamp(44px, 7vw, 64px); color: #FFFBF1; line-height: 1.05; }
+  .invest-hero .lede { margin: 0; font-size: 19px; line-height: 1.6; color: #E9E3CC; max-width: 600px; }
+  .invest-hero.plain { background: var(--card); }
+  .invest-hero.plain h1 { color: var(--heading); }
+  .invest-hero.plain .lede { color: var(--muted); }
+  .options { display: grid; gap: 16px; }
+  .option { display: flex; align-items: center; gap: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; }
+  .option .num { font-family: 'Archivo Black', sans-serif; font-size: 16px; color: var(--accent); min-width: 28px; }
+  .option .text { flex: 1; min-width: 0; }
+  .option h3 { margin: 0 0 4px 0; font-size: 20px; color: var(--ink); }
+  .option p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--muted); }
+  .option .go { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; padding: 10px 18px; border-radius: 999px; white-space: nowrap; border: none; cursor: pointer; font-family: inherit; }
+  .option .go.primary { color: #FFFBF1; background: var(--accent); }
+  .option .go.gold { color: var(--ink); background: #FFD54A; }
+  .option .go.soon { color: var(--muted); background: rgba(143,174,122,0.25); cursor: default; }
+  .back { display: inline-block; margin-top: 32px; font-size: 16px; font-weight: 700; color: var(--accent); }
+  @media (max-width: 560px) { .option { flex-wrap: wrap; } .option .go { margin-left: 48px; } }
+</style>
+</head>
+<body>
+<div style="position: relative; overflow: hidden;">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+
+  <div class="nav">
+    <div class="wrap nav-inner">
+      <a href="/" class="brand"><span class="light">Quigley</span>&nbsp;<span class="accent">Discovery</span></a>
+      <a href="/#artists" style="font-size: 16px; font-weight: 700; color: var(--accent);">← Back to artists</a>
+    </div>
+  </div>
+
+  <div class="wrap invest-page" id="invest-root">
+    <p class="loading">Loading…</p>
+  </div>
+</div>
+
+<script>
+// One Invest page for every artist: /invest.html?artist=<slug>.
+// Pulls the artist from /api/artists so links stay in sync with seed.py.
+(function () {
+  const root = document.getElementById("invest-root");
+  const slug = new URLSearchParams(location.search).get("artist") || "";
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+    ));
+  }
+
+  function option(n, title, body, action) {
+    return `
+      <div class="option">
+        <span class="num">0${n}</span>
+        <div class="text"><h3>${esc(title)}</h3><p>${esc(body)}</p></div>
+        ${action}
+      </div>`;
+  }
+
+  function link(href, label, cls) {
+    return `<a class="go ${cls}" href="${esc(href)}" target="_blank" rel="noopener">${esc(label)}</a>`;
+  }
+
+  function render(a) {
+    document.title = `Invest in ${a.name} — Quigley Discovery`;
+    const hero = a.has_card_photo
+      ? `<div class="card-bg"><img src="${esc(a.card_photo)}" alt=""><div class="overlay"></div></div>`
+      : "";
+    const follow = a.instagram_url || a.spotify_url;
+    const options = [
+      option(1, "Add their music to your library",
+        "The simplest investment: save their songs on Spotify so they show up in your rotation.",
+        a.spotify_url ? link(a.spotify_url, "Open Spotify →", "primary") : `<span class="go soon">Coming soon</span>`),
+      option(2, "Follow them",
+        "Follows tell algorithms and labels that real people are paying attention.",
+        follow ? link(follow, a.instagram_url ? "Follow on Instagram →" : "Follow on Spotify →", "primary") : `<span class="go soon">Coming soon</span>`),
+      option(3, "Share with a friend",
+        "Word of mouth is how independent artists grow. Send them to someone who'd get it.",
+        `<button type="button" class="go gold" id="share-btn">Share ${esc(a.name)}</button>`),
+      option(4, "Buy merch",
+        "Merch money goes straight to the artist and keeps the lights on.",
+        a.merch_url ? link(a.merch_url, "Shop merch →", "gold") : `<span class="go soon">Coming soon</span>`),
+      option(5, "Get a concert ticket",
+        "Show up in person. Nothing says “I believe in you” like a sold-out room.",
+        a.tickets_url ? link(a.tickets_url, "Find tickets →", "gold") : `<span class="go soon">Coming soon</span>`),
+    ].join("");
+
+    root.innerHTML = `
+      <div class="invest-hero ${a.has_card_photo ? "card-dark" : "plain"}">
+        ${hero}
+        <div class="inner">
+          <span class="tag featured-tag">How will you invest?</span>
+          <h1 style="font-family:${a.title_font};">${esc(a.name)}</h1>
+          <p class="lede">Pick one, or all five. Every one of these moves the needle for an independent artist.</p>
+        </div>
+      </div>
+      <div class="options">${options}</div>
+      <a class="back" href="${esc(a.profile_href || "/#artists")}">← ${esc(a.name)}'s full profile</a>`;
+
+    const shareBtn = document.getElementById("share-btn");
+    shareBtn.addEventListener("click", async () => {
+      const url = a.spotify_url || location.href;
+      const text = `Check out ${a.name}, discovered via Quigley Discovery`;
+      try {
+        if (navigator.share) await navigator.share({ title: a.name, text, url });
+        else { await navigator.clipboard.writeText(`${text}: ${url}`); shareBtn.textContent = "Link copied!"; }
+      } catch (e) { /* user cancelled */ }
+    });
+  }
+
+  fetch("/api/artists")
+    .then((r) => r.json())
+    .then((data) => {
+      const a = (data.artists || []).find((x) => x.slug === slug);
+      if (!a) {
+        root.innerHTML = `<p class="loading">Artist not found. <a class="back" href="/#artists">See this week's artists →</a></p>`;
+        return;
+      }
+      render(a);
+    })
+    .catch(() => { root.innerHTML = `<p class="loading">Couldn't load this artist. Is the server running?</p>`; });
+})();
+</script>
+</body>
+</html>

@@ -37,7 +37,7 @@
   <div class="nav">
     <div class="wrap nav-inner">
       <a href="/" class="brand"><span class="light">Quigley</span>&nbsp;<span class="accent">Discovery</span></a>
-      <a href="/#artists" style="font-size: 16px; font-weight: 700; color: var(--accent);">← Back to artists</a>
+      <a href="/#picks" style="font-size: 16px; font-weight: 700; color: var(--accent);">← Back to artists</a>
     </div>
   </div>
 
@@ -106,7 +106,7 @@
         </div>
       </div>
       <div class="options">${options}</div>
-      <a class="back" href="${esc(a.profile_href || "/#artists")}">← ${esc(a.name)}'s full profile</a>`;
+      <a class="back" href="${esc(a.profile_href || "/#picks")}">← ${esc(a.name)}'s full profile</a>`;
 
     const shareBtn = document.getElementById("share-btn");
     shareBtn.addEventListener("click", async () => {
@@ -124,7 +124,7 @@
     .then((data) => {
       const a = (data.artists || []).find((x) => x.slug === slug);
       if (!a) {
-        root.innerHTML = `<p class="loading">Artist not found. <a class="back" href="/#artists">See this week's artists →</a></p>`;
+        root.innerHTML = `<p class="loading">Artist not found. <a class="back" href="/#picks">See this week's artists →</a></p>`;
         return;
       }
       render(a);

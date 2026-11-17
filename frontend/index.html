@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<div id="top" style="position: relative; overflow: hidden;">
+<div id="top" style="position: relative; overflow-x: clip;">
 
   <div class="blob b1"></div>
   <div class="blob b2"></div>
@@ -20,9 +20,8 @@
     <div class="wrap nav-inner">
       <a href="#top" class="brand"><span class="light">Quigley</span>&nbsp;<span class="accent">Discovery</span></a>
       <div class="nav-links">
-        <a href="#jackpot">Artist Picks</a>
+        <a href="#picks">Artist Picks</a>
         <a href="#approach">Approach</a>
-        <a href="#artists">Artists</a>
         <a href="#about">About</a>
         <a href="#contact">Contact</a>
       </div>
@@ -36,9 +35,6 @@
         <img src="/assets/4f12d7bf223e102db5eb1f722bebd02e.jpg" alt="">
         <div class="overlay"></div>
       </div>
-      <div class="hero-photo">
-        <img src="/assets/d4e881bc38b26d497b3aafd9849b9d15.jpg" alt="Quigley Discovery">
-      </div>
       <div class="hero-inner">
         <div id="jackpot">
           <h1>Quigley Discovery</h1>
@@ -50,7 +46,7 @@
       </div>
     </div>
 
-    <div class="week-head" style="margin-top: 40px;">
+    <div id="picks" class="week-head" style="margin-top: 40px;">
       <h2 class="heading" style="margin:0;">This Week's Artists</h2>
       <div style="text-align:right;">
         <button id="refresh-btn" class="btn-refresh" type="button">↻ Refresh stats</button>

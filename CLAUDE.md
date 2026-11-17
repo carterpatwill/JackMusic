@@ -2,6 +2,11 @@
 
 Context for Claude Code working on this repo. Read this first.
 
+> **Which data is actually available from Spotify / YouTube (and what's
+> blocked) is documented in [`DATA_SOURCES.md`](DATA_SOURCES.md).** Read it
+> before proposing or building any stats feature — e.g. Spotify followers /
+> popularity are NOT available on this tier; YouTube views/subs ARE.
+
 ## What this is
 
 A weekly independent-music discovery site. Each week features 5 independent
@@ -45,6 +50,11 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
 - `backend/refresh.py` — the ONLY place API keys are used. Spotify Client
   Credentials flow; YouTube resolves a channel id from the artist's video URL
   once and caches it on the artist row.
+- `backend/spotify.py` — the Spotify data this tier DOES return: artist image +
+  discography (albums/singles with art + release dates). Powers the
+  "Discography" modal via `GET /api/artist/{slug}/spotify`. Token + album
+  responses are cached in-process. NOTE: this tier caps the albums `limit` at
+  10, so `get_albums` paginates; and it 400s above that.
 - `backend/app.py` — routes + static mounts. `/api/*` is defined before the
   static mounts so it takes precedence.
 - `frontend/app.js` — renders featured card + grid; handles refresh + signup.

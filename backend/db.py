@@ -169,6 +169,11 @@ def get_artists_for_week(week_of=None):
                 current["youtube_subs"] if current else None,
                 previous["youtube_subs"] if previous else None,
             ),
+            "views_trend_pct": _pct_change(
+                current["youtube_views"] if current else None,
+                previous["youtube_views"] if previous else None,
+            ),
+            "has_youtube_data": bool(current and current["youtube_views"] is not None),
             "has_data": current is not None,
             "has_trend": previous is not None,
         }
@@ -200,6 +205,15 @@ def get_artists_for_week(week_of=None):
         )
     conn.close()
     return artists
+
+
+def get_spotify_id(slug):
+    conn = connect()
+    row = conn.execute(
+        "SELECT spotify_id FROM artists WHERE slug = ?", (slug,)
+    ).fetchone()
+    conn.close()
+    return row["spotify_id"] if row else None
 
 
 def add_subscriber(email):

@@ -28,7 +28,7 @@ try:
 except ImportError:  # dotenv optional at runtime
     pass
 
-from . import db, refresh
+from . import db, refresh, spotify
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 FRONTEND = os.path.join(ROOT, "frontend")
@@ -56,6 +56,21 @@ def api_artists(week: str | None = None):
 @app.get("/api/weeks")
 def api_weeks():
     return {"weeks": db.get_weeks()}
+
+
+@app.get("/api/artist/{slug}/spotify")
+def api_artist_spotify(slug: str):
+    """Artist image + discography (album/single list with art + release dates)
+    pulled live from Spotify. Cached server-side for an hour."""
+    spotify_id = db.get_spotify_id(slug)
+    if not spotify_id:
+        raise HTTPException(status_code=404, detail="Unknown artist.")
+    try:
+        return spotify.artist_detail(spotify_id)
+    except spotify.SpotifyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"Spotify fetch failed: {e}")
 
 
 def _authorized(request: Request, token: str | None) -> bool:

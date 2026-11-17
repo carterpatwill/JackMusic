@@ -74,7 +74,15 @@ data.db        SQLite, auto-created (gitignored)
 |--------|-------|---------|
 | GET  | `/api/artists?week=latest` | Current week's artists + stats + trend |
 | GET  | `/api/weeks` | Available weeks (for an archive) |
+| GET  | `/api/artist/{slug}/spotify` | Artist image + discography (art, dates) from Spotify |
 | POST | `/api/refresh` | Fetch live stats, store a snapshot (admin-only) |
 | POST | `/api/subscribe` | Store a newsletter email |
+
+## What data each service offers
+
+**[`DATA_SOURCES.md`](DATA_SOURCES.md)** — a plain-language rundown of exactly
+what stats and content are available from YouTube and Spotify (and what's
+blocked), plus free/paid options not yet connected. Start there to understand
+what the site can and can't show.
 
 See `CLAUDE.md` for architecture notes and conventions.

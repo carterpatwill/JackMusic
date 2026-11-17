@@ -9,44 +9,47 @@ function esc(s) {
   ));
 }
 
+// Headline trend = week-over-week YouTube view growth (the liveliest signal
+// for emerging artists). Spotify's API no longer shares stats on this tier.
 function trendBadge(stats) {
-  const pct = stats.followers_trend_pct;
-  if (!stats.has_data) return `<span class="trend flat">— no data yet</span>`;
+  if (!stats.has_youtube_data) return "";  // e.g. Tomb (no YouTube)
+  const pct = stats.views_trend_pct;
   if (pct === null || pct === undefined) {
-    return `<span class="trend flat">baseline set</span>`;
+    return `<span class="trend flat" title="First snapshot — growth shows on the next refresh">baseline set</span>`;
   }
   const dir = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
   const arrow = `<svg class="${dir}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>`;
   const sign = pct > 0 ? "+" : "";
-  return `<span class="trend ${dir}" title="Week-over-week Spotify follower change">${arrow}${sign}${pct}%</span>`;
+  return `<span class="trend ${dir}" title="Week-over-week YouTube view change">${arrow}${sign}${pct}% views</span>`;
 }
 
 function fmt(n) {
   if (n === null || n === undefined) return "—";
-  return Number(n).toLocaleString();
+  const v = Number(n);
+  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (v >= 1_000) return (v / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+  return v.toLocaleString();
 }
 
 function secondaryStats(stats) {
   const bits = [];
-  if (stats.spotify_followers != null) bits.push(`${fmt(stats.spotify_followers)} Spotify followers`);
-  if (stats.spotify_popularity != null) {
-    const d = stats.popularity_delta;
-    const delta = d === null || d === undefined ? "" : ` (${d >= 0 ? "+" : ""}${d})`;
-    bits.push(`Popularity ${stats.spotify_popularity}${delta}`);
-  }
-  if (stats.youtube_subs != null) bits.push(`${fmt(stats.youtube_subs)} YT subs`);
+  if (stats.youtube_views != null) bits.push(`${fmt(stats.youtube_views)} YouTube views`);
+  if (stats.youtube_subs != null && stats.youtube_subs > 0) bits.push(`${fmt(stats.youtube_subs)} subscribers`);
   if (!bits.length) return "";
   return `<div class="secondary-stats">${bits.map((b) => `<span>${esc(b)}</span>`).join("")}</div>`;
 }
 
 function socials(a) {
+  const disco = a.spotify_url
+    ? `<a href="#" class="disco" data-slug="${esc(a.slug)}" data-name="${esc(a.name)}">Discography →</a>`
+    : "";
   const yt = a.has_youtube
     ? `<a href="${esc(a.youtube_url)}" target="_blank" rel="noopener">YouTube →</a>`
     : "";
   const ig = a.instagram_url
     ? `<a href="${esc(a.instagram_url)}" target="_blank" rel="noopener">Instagram →</a>`
     : "";
-  return `<div class="socials">${yt}${ig}</div>`;
+  return `<div class="socials">${disco}${yt}${ig}</div>`;
 }
 
 function actions(a) {
@@ -150,7 +153,7 @@ async function refreshStats() {
   btn.disabled = true;
   const orig = btn.textContent;
   btn.textContent = "Fetching…";
-  note.textContent = "Pulling live stats from Spotify + YouTube…";
+  note.textContent = "Pulling live YouTube stats…";
   try {
     const res = await fetch("/api/refresh", { method: "POST" });
     const data = await res.json();
@@ -189,11 +192,99 @@ async function subscribe() {
   }
 }
 
+// ---- Discography modal (Spotify artist image + album list) ----------------
+function ensureModal() {
+  let root = document.getElementById("disco-modal");
+  if (root) return root;
+  root = document.createElement("div");
+  root.id = "disco-modal";
+  root.className = "modal-backdrop hidden";
+  root.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <button class="modal-close" aria-label="Close">×</button>
+      <div class="modal-head"></div>
+      <div class="modal-body"></div>
+    </div>`;
+  document.body.appendChild(root);
+  root.addEventListener("click", (e) => {
+    if (e.target === root || e.target.classList.contains("modal-close")) closeModal();
+  });
+  return root;
+}
+
+function closeModal() {
+  const root = document.getElementById("disco-modal");
+  if (root) root.classList.add("hidden");
+}
+
+function albumCard(al) {
+  const art = al.image
+    ? `<img src="${esc(al.image)}" alt="" loading="lazy">`
+    : `<div class="album-art-fallback">♪</div>`;
+  const year = (al.release_date || "").slice(0, 10);
+  const type = al.type ? al.type[0].toUpperCase() + al.type.slice(1) : "";
+  const tracks = al.total_tracks ? ` · ${al.total_tracks} track${al.total_tracks > 1 ? "s" : ""}` : "";
+  const inner = `
+    <div class="album-art">${art}</div>
+    <div class="album-name">${esc(al.name)}</div>
+    <div class="album-meta">${esc(year)}${type ? " · " + esc(type) : ""}${tracks}</div>`;
+  return al.url
+    ? `<a class="album-card" href="${esc(al.url)}" target="_blank" rel="noopener">${inner}</a>`
+    : `<div class="album-card">${inner}</div>`;
+}
+
+async function openDiscography(slug, name) {
+  const root = ensureModal();
+  const head = root.querySelector(".modal-head");
+  const body = root.querySelector(".modal-body");
+  head.innerHTML = `<h3>${esc(name)}</h3>`;
+  body.innerHTML = `<p class="loading">Loading discography from Spotify…</p>`;
+  root.classList.remove("hidden");
+
+  try {
+    const res = await fetch(`/api/artist/${encodeURIComponent(slug)}/spotify`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Couldn't load discography");
+
+    const img = data.image
+      ? `<img class="modal-artist-img" src="${esc(data.image)}" alt="">`
+      : "";
+    const link = data.url
+      ? `<a class="modal-open-spotify" href="${esc(data.url)}" target="_blank" rel="noopener">Open on Spotify →</a>`
+      : "";
+    head.innerHTML = `
+      ${img}
+      <div>
+        <h3>${esc(data.name || name)}</h3>
+        <p class="modal-sub">${data.albums.length} release${data.albums.length === 1 ? "" : "s"} on Spotify</p>
+        ${link}
+      </div>`;
+
+    body.innerHTML = data.albums.length
+      ? `<div class="album-grid">${data.albums.map(albumCard).join("")}</div>`
+      : `<p class="loading">No releases found on Spotify.</p>`;
+  } catch (e) {
+    body.innerHTML = `<p class="loading">${esc(String(e.message || e))}</p>`;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   loadArtists();
   document.getElementById("refresh-btn").addEventListener("click", refreshStats);
   document.getElementById("signup-btn").addEventListener("click", subscribe);
   document.getElementById("signup-email").addEventListener("keydown", (e) => {
     if (e.key === "Enter") subscribe();
+  });
+
+  // Delegated: any "Discography →" link opens the modal.
+  document.addEventListener("click", (e) => {
+    const link = e.target.closest(".disco");
+    if (link) {
+      e.preventDefault();
+      openDiscography(link.dataset.slug, link.dataset.name);
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
   });
 });

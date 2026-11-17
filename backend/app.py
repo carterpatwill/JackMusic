@@ -15,6 +15,7 @@ localhost only (fine for local dev).
 """
 
 import os
+from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -45,7 +46,7 @@ def index():
 
 
 @app.get("/api/artists")
-def api_artists(week: str | None = None):
+def api_artists(week: Optional[str] = None):
     week_of = None if (week in (None, "", "latest")) else week
     return {
         "week_of": week_of or db.latest_week(),
@@ -73,7 +74,7 @@ def api_artist_spotify(slug: str):
         raise HTTPException(status_code=502, detail=f"Spotify fetch failed: {e}")
 
 
-def _authorized(request: Request, token: str | None) -> bool:
+def _authorized(request: Request, token: Optional[str]) -> bool:
     admin = os.environ.get("ADMIN_TOKEN")
     if admin:
         return token == admin
@@ -83,7 +84,7 @@ def _authorized(request: Request, token: str | None) -> bool:
 
 
 @app.post("/api/refresh")
-def api_refresh(request: Request, x_admin_token: str | None = Header(default=None)):
+def api_refresh(request: Request, x_admin_token: Optional[str] = Header(default=None)):
     if not _authorized(request, x_admin_token):
         raise HTTPException(status_code=401, detail="Not authorized to refresh.")
     try:

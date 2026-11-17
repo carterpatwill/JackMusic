@@ -1,0 +1,17 @@
+# Secrets
+.env
+
+# SQLite database (regenerated on first run from backend/seed.py)
+data.db
+data.db-journal
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store

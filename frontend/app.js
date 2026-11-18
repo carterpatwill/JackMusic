@@ -14,13 +14,13 @@ function esc(s) {
 function trendBadge(stats) {
   if (!stats.has_youtube_data) return "";  // e.g. Tomb (no YouTube)
   const pct = stats.views_trend_pct;
-  if (pct === null || pct === undefined) {
-    return `<span class="trend flat" title="First snapshot — growth shows on the next refresh">baseline set</span>`;
-  }
+  // No badge until there's a snapshot ~a week older than the latest one,
+  // so the number shown is always a real week-over-week change.
+  if (pct === null || pct === undefined) return "";
   const dir = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
   const arrow = `<svg class="${dir}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>`;
   const sign = pct > 0 ? "+" : "";
-  return `<span class="trend ${dir}" title="Week-over-week YouTube view change">${arrow}${sign}${pct}% views</span>`;
+  return `<span class="trend ${dir}" title="Week-over-week YouTube view change">${arrow}${sign}${pct}% views this week</span>`;
 }
 
 function fmt(n) {
@@ -62,63 +62,87 @@ function actions(a) {
   return `<div class="actions">${trendBadge(a.stats)}${spotify}${invest}</div>`;
 }
 
-function featuredCard(a) {
-  const photo = a.has_card_photo
-    ? `<div class="card-bg"><img src="${esc(a.card_photo)}" alt=""><div class="overlay"></div></div>`
+// ---- Reel-first cards (experiment) ----------------------------------------
+// Each card leads with the artist's short-form video, the same Instagram
+// reels/posts used on the full profiles. Artists without one get a Spotify
+// player instead, so every card has something to press play on.
+// TODO if this design sticks: move these into seed.py (a reel_url per artist).
+const REELS = {
+  arze: "https://www.instagram.com/reel/DdkZcuIPJ9C/embed",
+  doov: "https://www.instagram.com/reel/DZvQyjfJ3kz/embed",
+  themba: "https://www.instagram.com/p/DaTKS-GJCSZ/embed",
+  tomb: "https://www.instagram.com/p/DeuiFUdOnul/embed",
+};
+
+function reel(a) {
+  const ig = REELS[a.slug];
+  if (ig) {
+    return `<div class="reel-window"><iframe src="${esc(ig)}" title="${esc(a.name)} on Instagram" loading="lazy" scrolling="no" allowtransparency="true" allow="autoplay; encrypted-media; picture-in-picture; web-share"></iframe></div>`;
+  }
+  if (a.spotify_url) {
+    const src = a.spotify_url.replace("open.spotify.com/artist/", "open.spotify.com/embed/artist/") + "?theme=0";
+    return `<div class="reel-window spotify"><iframe src="${esc(src)}" title="${esc(a.name)} on Spotify" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe></div>`;
+  }
+  return "";
+}
+
+// Plain-text labels (not pills) so they don't read as buttons.
+function genreLabel(a) {
+  return `<span class="genre-label"><i style="background:${esc(a.tag_color)};"></i>${esc(a.tag)}</span>`;
+}
+
+function trendText(stats) {
+  const pct = stats && stats.views_trend_pct;
+  if (!stats || !stats.has_youtube_data || pct === null || pct === undefined) return "";
+  const dir = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+  const arrow = pct > 0 ? "↑" : pct < 0 ? "↓" : "→";
+  return `<span class="trend-text ${dir}" title="Week-over-week YouTube view change">${arrow} ${pct > 0 ? "+" : ""}${pct}% views this week</span>`;
+}
+
+function buttons(a) {
+  const spotify = a.spotify_url
+    ? `<a class="listen" href="${esc(a.spotify_url)}" target="_blank" rel="noopener"><svg width="10" height="10" viewBox="0 0 24 24" fill="#FFFBF1"><path d="M8 5v14l11-7z"></path></svg>Listen Now</a>`
     : "";
+  const invest = a.invest_href ? `<a class="invest" href="${esc(a.invest_href)}">Invest →</a>` : "";
+  return `<div class="actions">${spotify}${invest}</div>`;
+}
+
+function textLinks(a, full) {
+  const bits = [];
+  if (a.profile_href) bits.push(`<a href="${esc(a.profile_href)}">Full profile →</a>`);
+  if (a.spotify_url) bits.push(`<a href="#" class="disco" data-slug="${esc(a.slug)}" data-name="${esc(a.name)}">Discography →</a>`);
+  if (full && a.has_youtube) bits.push(`<a href="${esc(a.youtube_url)}" target="_blank" rel="noopener">YouTube →</a>`);
+  if (full && a.instagram_url) bits.push(`<a href="${esc(a.instagram_url)}" target="_blank" rel="noopener">Instagram →</a>`);
+  return `<div class="text-links">${bits.join("")}</div>`;
+}
+
+function featuredCard(a) {
+  const hint = REELS[a.slug] ? "Press play on the reel" : "Press play to hear them";
   return `
-    <div class="featured-card card-dark">
-      ${photo}
-      <div class="inner" style="padding:40px;">
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-          <span class="tag featured-tag">Featured Pick</span>
-          <span class="tag solid" style="background:${esc(a.tag_color)};">${esc(a.tag)}</span>
-        </div>
-        <div class="card-top">
-          <div>
-            <h3 class="artist-name" style="font-family:${a.title_font};">${esc(a.name)}</h3>
-            <a class="full-profile" href="${esc(a.profile_href)}">Full profile</a>
-          </div>
-          ${actions(a)}
-        </div>
-        <p class="bio">${esc(a.bio)}</p>
-        ${socials(a)}
+    <div class="feat">
+      <div class="feat-reel">${reel(a)}</div>
+      <div class="feat-info">
+        <span class="feat-eyebrow">★ Featured Pick · This week's top pick</span>
+        <h3 class="feat-name" style="font-family:${a.title_font};">${esc(a.name)}</h3>
+        ${genreLabel(a)}
+        ${trendText(a.stats)}
+        <p class="play-hint"><span>◀</span> ${hint}</p>
+        ${buttons(a)}
+        ${textLinks(a, true)}
       </div>
     </div>`;
 }
 
 function gridCard(a) {
-  if (a.has_card_photo) {
-    return `
-      <div class="artist-card photo card-dark">
-        <div class="card-bg"><img src="${esc(a.card_photo)}" alt=""><div class="overlay"></div></div>
-        <div class="inner">
-          <span class="tag solid" style="background:${esc(a.tag_color)};">${esc(a.tag)}</span>
-          <div class="card-top">
-            <div>
-              <h3 class="artist-name" style="font-family:${a.title_font};">${esc(a.name)}</h3>
-              <a class="full-profile" href="${esc(a.profile_href)}">Full profile</a>
-            </div>
-            ${actions(a)}
-          </div>
-          <p class="bio">${esc(a.bio)}</p>
-          ${socials(a)}
-        </div>
-      </div>`;
-  }
   return `
-    <div class="artist-card">
-      <div class="inner">
-        <span class="tag solid" style="background:${esc(a.tag_color)};">${esc(a.tag)}</span>
-        <div class="card-top">
-          <div>
-            <h3 class="artist-name" style="font-family:${a.title_font};">${esc(a.name)}</h3>
-            <a class="full-profile" href="${esc(a.profile_href)}">Full profile</a>
-          </div>
-          ${actions(a)}
-        </div>
-        <p class="bio">${esc(a.bio)}</p>
-        ${socials(a)}
+    <div class="reel-card">
+      ${reel(a)}
+      <div class="reel-info">
+        <h3 class="reel-name" style="font-family:${a.title_font};">${esc(a.name)}</h3>
+        ${genreLabel(a)}
+        ${trendText(a.stats)}
+        ${buttons(a)}
+        ${textLinks(a, false)}
       </div>
     </div>`;
 }
@@ -268,6 +292,13 @@ async function openDiscography(slug, name) {
 document.addEventListener("DOMContentLoaded", () => {
   loadArtists();
   document.getElementById("refresh-btn").addEventListener("click", refreshStats);
+  // Reel rail arrows: scroll by roughly one card.
+  document.querySelectorAll(".rail-btn").forEach((b) => b.addEventListener("click", () => {
+    const rail = document.getElementById("artist-grid");
+    const card = rail.querySelector(".reel-card");
+    const stepPx = card ? card.getBoundingClientRect().width + 20 : 360;
+    rail.scrollBy({ left: Number(b.dataset.dir) * stepPx, behavior: "smooth" });
+  }));
   document.getElementById("signup-btn").addEventListener("click", subscribe);
   document.getElementById("signup-email").addEventListener("keydown", (e) => {
     if (e.key === "Enter") subscribe();

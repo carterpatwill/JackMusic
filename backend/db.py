@@ -8,7 +8,7 @@ dependency-light.
 
 import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from . import seed
 
@@ -118,12 +118,37 @@ def latest_week():
     return weeks[0] if weeks else seed.CURRENT_WEEK
 
 
-def _two_latest_snapshots(conn, artist_id):
-    rows = conn.execute(
-        "SELECT * FROM snapshots WHERE artist_id = ? ORDER BY captured_at DESC LIMIT 2",
+# A trend compares the latest snapshot with one taken at least this long
+# before it, so "+X%" is a real week-over-week change no matter how often
+# Refresh is clicked. (Slightly under 7 days so a weekly refresh that runs a
+# few hours early still counts.)
+TREND_MIN_GAP = timedelta(days=6)
+
+
+def _latest_and_week_ago(conn, artist_id):
+    """Return (latest snapshot, most recent snapshot >= TREND_MIN_GAP older).
+    Either may be None."""
+    latest = conn.execute(
+        "SELECT * FROM snapshots WHERE artist_id = ? ORDER BY captured_at DESC LIMIT 1",
         (artist_id,),
-    ).fetchall()
-    return rows
+    ).fetchone()
+    if not latest:
+        return None, None
+    cutoff = (datetime.fromisoformat(latest["captured_at"]) - TREND_MIN_GAP).isoformat()
+    previous = conn.execute(
+        "SELECT * FROM snapshots WHERE artist_id = ? AND captured_at <= ? "
+        "ORDER BY captured_at DESC LIMIT 1",
+        (artist_id, cutoff),
+    ).fetchone()
+    return latest, previous
+
+
+def _first_snapshot_at(conn, artist_id):
+    row = conn.execute(
+        "SELECT MIN(captured_at) AS first FROM snapshots WHERE artist_id = ?",
+        (artist_id,),
+    ).fetchone()
+    return row["first"] if row else None
 
 
 def _pct_change(current, previous):
@@ -134,7 +159,7 @@ def _pct_change(current, previous):
 
 def get_artists_for_week(week_of=None):
     """Return artists for a week, each enriched with latest stats and the
-    real week-over-week trend computed from the two most recent snapshots."""
+    real week-over-week trend (latest snapshot vs. one ~a week older)."""
     week_of = week_of or latest_week()
     conn = connect()
     artist_rows = conn.execute(
@@ -144,9 +169,7 @@ def get_artists_for_week(week_of=None):
 
     artists = []
     for ar in artist_rows:
-        snaps = _two_latest_snapshots(conn, ar["id"])
-        current = snaps[0] if snaps else None
-        previous = snaps[1] if len(snaps) > 1 else None
+        current, previous = _latest_and_week_ago(conn, ar["id"])
 
         stats = {
             "spotify_followers": current["spotify_followers"] if current else None,
@@ -176,6 +199,8 @@ def get_artists_for_week(week_of=None):
             "has_youtube_data": bool(current and current["youtube_views"] is not None),
             "has_data": current is not None,
             "has_trend": previous is not None,
+            "trend_compared_to": previous["captured_at"] if previous else None,
+            "tracking_since": _first_snapshot_at(conn, ar["id"]),
         }
 
         artists.append(

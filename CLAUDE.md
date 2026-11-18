@@ -35,10 +35,13 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
                                                    └──> writes a snapshot row
 ```
 
-- Trend % = `(latest_followers - previous_followers) / previous_followers`,
-  computed in `db.get_artists_for_week()` from the two most recent snapshots.
-- A snapshot is one row per artist per refresh. Two snapshots are needed before
-  any trend appears — the first is a baseline.
+- Trend % = `(latest - week_ago) / week_ago`, computed in
+  `db.get_artists_for_week()` by comparing the latest snapshot with the most
+  recent snapshot at least 6 days older (`TREND_MIN_GAP`). The homepage badge
+  uses YouTube views.
+- A snapshot is one row per artist per refresh. No trend appears until there
+  is a snapshot ~a week older than the latest one; refreshing more often is
+  fine (it always compares against ~a week back).
 - Refresh is **manual** (a button). No cron/scheduler by design.
 
 ## Files

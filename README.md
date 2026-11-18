@@ -28,8 +28,9 @@ uvicorn backend.app:app --reload
 
 The site loads immediately with the current roster. Stats show "no data yet"
 until you click **Refresh stats** (top of the Artists section), which fetches
-live numbers. The *first* refresh sets a baseline; the trend percentages
-appear from the *second* refresh onward (you need two points to measure change).
+live numbers. Trend percentages compare the latest refresh with one taken
+about a week earlier, so they appear once you have refreshes at least 6 days
+apart (refreshing more often is fine).
 
 ## API keys
 

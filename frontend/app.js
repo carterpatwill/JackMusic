@@ -72,7 +72,7 @@ function featuredCard(a) {
       <div class="inner" style="padding:40px;">
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
           <span class="tag featured-tag">Featured Pick</span>
-          <span class="tag" style="color:${esc(a.tag_color)}; background:${esc(a.tag_bg)};">${esc(a.tag)}</span>
+          <span class="tag solid" style="background:${esc(a.tag_color)};">${esc(a.tag)}</span>
         </div>
         <div class="card-top">
           <div>
@@ -82,7 +82,6 @@ function featuredCard(a) {
           ${actions(a)}
         </div>
         <p class="bio">${esc(a.bio)}</p>
-        ${secondaryStats(a.stats)}
         ${socials(a)}
       </div>
     </div>`;
@@ -94,7 +93,7 @@ function gridCard(a) {
       <div class="artist-card photo card-dark">
         <div class="card-bg"><img src="${esc(a.card_photo)}" alt=""><div class="overlay"></div></div>
         <div class="inner">
-          <span class="tag" style="color:${esc(a.tag_color)}; background:${esc(a.tag_bg)};">${esc(a.tag)}</span>
+          <span class="tag solid" style="background:${esc(a.tag_color)};">${esc(a.tag)}</span>
           <div class="card-top">
             <div>
               <h3 class="artist-name" style="font-family:${a.title_font};">${esc(a.name)}</h3>
@@ -103,7 +102,6 @@ function gridCard(a) {
             ${actions(a)}
           </div>
           <p class="bio">${esc(a.bio)}</p>
-          ${secondaryStats(a.stats)}
           ${socials(a)}
         </div>
       </div>`;
@@ -111,7 +109,7 @@ function gridCard(a) {
   return `
     <div class="artist-card">
       <div class="inner">
-        <span class="tag" style="color:${esc(a.tag_color)}; background:${esc(a.tag_bg)};">${esc(a.tag)}</span>
+        <span class="tag solid" style="background:${esc(a.tag_color)};">${esc(a.tag)}</span>
         <div class="card-top">
           <div>
             <h3 class="artist-name" style="font-family:${a.title_font};">${esc(a.name)}</h3>
@@ -120,7 +118,6 @@ function gridCard(a) {
           ${actions(a)}
         </div>
         <p class="bio">${esc(a.bio)}</p>
-        ${secondaryStats(a.stats)}
         ${socials(a)}
       </div>
     </div>`;

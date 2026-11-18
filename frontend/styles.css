@@ -94,6 +94,8 @@ a:hover { opacity: 0.8; }
 
 .tag { align-self: flex-start; font-size: 14px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
 .tag.featured-tag { color: #FFFBF1; background: var(--accent); }
+/* Genre tags: solid fill + solid border so they read on dark photos and light cards alike. */
+.tag.solid { color: #FFFBF1; border: 2px solid #8FAE7C; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
 
 .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .artist-name { margin: 0; }

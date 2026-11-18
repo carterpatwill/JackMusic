@@ -158,6 +158,9 @@ a:hover { opacity: 0.8; }
 .feat .invest { font-size: 15px; padding: 11px 20px; }
 .feat .text-links a { color: #FFFBF1; }
 
+.feat-bio { margin: 0; font-size: 17px; line-height: 1.6; color: #E9E3CC; max-width: 560px; }
+.reel-bio { margin: 0; font-size: 15px; line-height: 1.55; color: var(--muted); }
+
 .rail-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .rail-title { margin: 0; font-family: 'Sorean', serif; font-size: 26px; color: var(--heading); }
 .rail-title span { display: block; font-family: 'Archivo', sans-serif; font-size: 14px; color: var(--muted); margin-top: 2px; }

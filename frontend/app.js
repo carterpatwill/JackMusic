@@ -134,6 +134,7 @@ function featuredCard(a) {
         <h3 class="feat-name" style="font-family:${a.title_font};">${nameLink(a)}</h3>
         ${genreLabel(a)}
         ${trendText(a.stats)}
+        ${a.bio ? `<p class="feat-bio">${esc(a.bio)}</p>` : ""}
         <p class="play-hint"><span>◀</span> ${hint}</p>
         ${buttons(a)}
         ${textLinks(a, true)}
@@ -149,6 +150,7 @@ function gridCard(a) {
         <h3 class="reel-name" style="font-family:${a.title_font};">${nameLink(a)}</h3>
         ${genreLabel(a)}
         ${trendText(a.stats)}
+        ${a.bio ? `<p class="reel-bio">${esc(a.bio)}</p>` : ""}
         ${buttons(a)}
         ${textLinks(a, false)}
       </div>

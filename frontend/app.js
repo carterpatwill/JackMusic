@@ -116,6 +116,14 @@ function textLinks(a, full) {
   return `<div class="text-links">${bits.join("")}</div>`;
 }
 
+// The artist's name is itself a link to their full profile (the
+// "Full profile →" link stays too).
+function nameLink(a) {
+  return a.profile_href
+    ? `<a class="name-link" href="${esc(a.profile_href)}" title="${esc(a.name)}'s full profile">${esc(a.name)}</a>`
+    : esc(a.name);
+}
+
 function featuredCard(a) {
   const hint = REELS[a.slug] ? "Press play on the reel" : "Press play to hear them";
   return `
@@ -123,7 +131,7 @@ function featuredCard(a) {
       <div class="feat-reel">${reel(a)}</div>
       <div class="feat-info">
         <span class="feat-eyebrow">★ Featured Pick · This week's top pick</span>
-        <h3 class="feat-name" style="font-family:${a.title_font};">${esc(a.name)}</h3>
+        <h3 class="feat-name" style="font-family:${a.title_font};">${nameLink(a)}</h3>
         ${genreLabel(a)}
         ${trendText(a.stats)}
         <p class="play-hint"><span>◀</span> ${hint}</p>
@@ -138,7 +146,7 @@ function gridCard(a) {
     <div class="reel-card">
       ${reel(a)}
       <div class="reel-info">
-        <h3 class="reel-name" style="font-family:${a.title_font};">${esc(a.name)}</h3>
+        <h3 class="reel-name" style="font-family:${a.title_font};">${nameLink(a)}</h3>
         ${genreLabel(a)}
         ${trendText(a.stats)}
         ${buttons(a)}

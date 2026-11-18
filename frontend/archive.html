@@ -157,7 +157,7 @@
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <span class="tag featured-tag">Featured Pick</span>${tag(a)}
           </div>
-          <h3 class="name" style="font-family:${a.title_font};">${esc(a.name)}</h3>
+          <h3 class="name" style="font-family:${a.title_font};">${a.profile_href ? `<a class="name-link" href="${esc(a.profile_href)}" title="${esc(a.name)}'s full profile">${esc(a.name)}</a>` : esc(a.name)}</h3>
           <p class="bio">${esc(a.bio)}</p>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">${links(a)}</div>
         </div>
@@ -169,7 +169,7 @@
       <div class="ar-card" data-slug="${esc(a.slug)}">
         <div class="photo">${img}${tag(a)}${dropText ? `<span class="drop-label">${esc(dropText)}</span>` : ""}</div>
         <div class="body">
-          <h3 class="name" style="font-family:${a.title_font};">${esc(a.name)}</h3>
+          <h3 class="name" style="font-family:${a.title_font};">${a.profile_href ? `<a class="name-link" href="${esc(a.profile_href)}" title="${esc(a.name)}'s full profile">${esc(a.name)}</a>` : esc(a.name)}</h3>
           <p class="bio">${esc(a.bio)}</p>
           <div class="links">${links(a)}</div>
         </div>

@@ -172,6 +172,10 @@ a:hover { opacity: 0.8; }
 .reel-card .genre-label { color: var(--muted); }
 .reel-card .text-links a { color: var(--accent); font-size: 14px; }
 
+/* Artist names link to their full profile. */
+.name-link { color: inherit; text-decoration: none; background-image: linear-gradient(currentColor, currentColor); background-size: 0% 3px; background-position: 0 100%; background-repeat: no-repeat; transition: background-size .2s ease; }
+.name-link:hover, .name-link:focus-visible { opacity: 1; background-size: 100% 3px; }
+
 .see-prev { display: inline-flex; align-items: center; margin-top: 32px; font-size: 16px; font-weight: 700; color: var(--accent); }
 
 /* Criteria */

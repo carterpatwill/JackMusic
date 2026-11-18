@@ -4,8 +4,11 @@ Ported from the original design mockup. This is the real artist roster;
 the weekly stats (followers, popularity, subs) are NOT stored here — those
 are fetched live by refresh.py and written to the `snapshots` table.
 
-To publish a new week: add a new WEEK_OF block of artists (or edit this one),
-then run `python -m backend.db --reseed` and click Refresh in the UI.
+To publish a new week: set CURRENT_WEEK / CURRENT_WEEK_LABEL, replace ARTISTS
+with the new week's five (new slugs), then run `python -m backend.db --publish`
+and click Refresh in the UI. Earlier weeks stay in the database and show up in
+the archive (/archive.html). (`--reseed` wipes every week; avoid it once there
+is history you want to keep.)
 """
 
 CURRENT_WEEK = "2026-11-07"

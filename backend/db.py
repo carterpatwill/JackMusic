@@ -93,8 +93,41 @@ def _seed_artists(conn):
     conn.commit()
 
 
+def publish_week():
+    """Add seed.py's current week WITHOUT touching earlier weeks, so the
+    archive (/archive.html) keeps every past drop and its stats history.
+    Artists already in the DB (matched by slug) are left as they are.
+    Returns (week_of, number of artists added)."""
+    conn = connect()
+    conn.executescript(SCHEMA)
+    existing = {r["slug"] for r in conn.execute("SELECT slug FROM artists")}
+    added = 0
+    for a in seed.ARTISTS:
+        if a["slug"] in existing:
+            continue
+        conn.execute(
+            """
+            INSERT INTO artists
+              (slug, name, week_of, tag, tag_color, tag_bg, bio, spotify_id,
+               youtube_url, instagram_url, card_photo, title_font,
+               profile_href, invest_href, is_featured, sort_order)
+            VALUES
+              (:slug, :name, :week_of, :tag, :tag_color, :tag_bg, :bio, :spotify_id,
+               :youtube_url, :instagram_url, :card_photo, :title_font,
+               :profile_href, :invest_href, :is_featured, :sort_order)
+            """,
+            {**a, "week_of": seed.CURRENT_WEEK},
+        )
+        added += 1
+    conn.commit()
+    conn.close()
+    return seed.CURRENT_WEEK, added
+
+
 def reseed():
-    """Wipe artists/snapshots and re-insert from seed.py. Subscribers kept."""
+    """Wipe ALL artists/snapshots (every week, including the archive) and
+    re-insert only seed.py's current week. Subscribers kept. To add a new
+    week and keep past ones, use publish_week() / --publish instead."""
     conn = connect()
     conn.executescript(SCHEMA)
     conn.execute("DELETE FROM snapshots")
@@ -260,9 +293,12 @@ def add_subscriber(email):
 if __name__ == "__main__":
     import sys
 
-    if "--reseed" in sys.argv:
+    if "--publish" in sys.argv:
+        week, added = publish_week()
+        print(f"Published week {week}: added {added} artist(s); earlier weeks kept.")
+    elif "--reseed" in sys.argv:
         reseed()
-        print("Reseeded artists from backend/seed.py")
+        print("Reseeded artists from backend/seed.py (all earlier weeks deleted)")
     else:
         init_db()
         print(f"Initialized {DB_PATH}")

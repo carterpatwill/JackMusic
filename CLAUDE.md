@@ -47,7 +47,9 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
 ## Files
 
 - `backend/seed.py` — the artist roster + week metadata. **This is the file you
-  edit to publish a new week.** Then `python -m backend.db --reseed`.
+  edit to publish a new week.** Then `python -m backend.db --publish`, which adds
+  the week and keeps earlier weeks for the archive. Artist slugs are UNIQUE
+  across all weeks, so each week's artists need new slugs.
 - `backend/db.py` — schema, seeding, trend query, subscribers. Stdlib sqlite3,
   no ORM.
 - `backend/refresh.py` — the ONLY place API keys are used. Spotify Client
@@ -61,6 +63,9 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
 - `backend/app.py` — routes + static mounts. `/api/*` is defined before the
   static mounts so it takes precedence.
 - `frontend/app.js` — renders featured card + grid; handles refresh + signup.
+- `frontend/archive.html` — "See Previous Weeks": every published week from
+  `/api/weeks` + `/api/artists?week=`, with week stepper, genre filter and
+  "Surprise me".
 - `frontend/styles.css` — design tokens in `:root`; `--accent` drives theme.
 
 ## Conventions
@@ -81,7 +86,8 @@ pip install -r requirements.txt
 cp .env.example .env            # add Spotify/YouTube keys
 uvicorn backend.app:app --reload
 python -m backend.refresh       # take a snapshot from the CLI
-python -m backend.db --reseed   # wipe + reseed artists after editing seed.py
+python -m backend.db --publish  # add seed.py's week, keep earlier weeks (archive)
+python -m backend.db --reseed   # wipe ALL weeks + stats, reseed current week only
 ```
 
 ## Known caveats / future work
@@ -89,8 +95,6 @@ python -m backend.db --reseed   # wipe + reseed artists after editing seed.py
 - Spotify's API does **not** expose "monthly listeners" (only followers +
   popularity). Monthly listeners would need a paid provider (Chartmetric,
   Songstats) or scraping — intentionally not implemented.
-- "See Previous Weeks" links are placeholders; `/api/weeks` exists to back a
-  real archive view when wanted.
 - `profile_href` / `invest_href` point at the old `.dc.html` filenames from the
   mockup; those per-artist pages don't exist yet.
 - For public deployment: set `ADMIN_TOKEN` and send it as the `X-Admin-Token`

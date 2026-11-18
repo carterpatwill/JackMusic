@@ -49,7 +49,9 @@ to the browser, so they stay private even though the site itself is static.
 
 1. Edit `backend/seed.py` — update `CURRENT_WEEK`, `CURRENT_WEEK_LABEL`, and the
    `ARTISTS` list.
-2. Re-seed the database: `python -m backend.db --reseed`
+2. Publish it: `python -m backend.db --publish` (adds the new week and keeps
+   every earlier week, which then appears on the archive page, `/archive.html`).
+   `--reseed` still exists but wipes all weeks and their stats history.
 3. Start the server and click **Refresh stats** twice (over the week) to build
    trend history.
 

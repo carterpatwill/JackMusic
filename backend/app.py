@@ -37,6 +37,17 @@ ASSETS = os.path.join(ROOT, "assets")
 
 app = FastAPI(title="Quigley Discovery")
 
+
+@app.middleware("http")
+async def revalidate_static(request: Request, call_next):
+    """Make browsers re-check pages, scripts and styles on every load (they
+    still get a fast 304 when nothing changed), so edits show up without a
+    hard refresh."""
+    response = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 db.init_db()
 
 

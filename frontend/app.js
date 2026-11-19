@@ -74,10 +74,15 @@ const REELS = {
   tomb: "https://www.instagram.com/p/DeuiFUdOnul/embed",
 };
 
+// Some reels render taller inside Instagram's player; give them their full
+// height so Instagram's own sound on/off button isn't cropped off.
+const REEL_HEIGHTS = { doov: 640 };
+
 function reel(a) {
   const ig = REELS[a.slug];
   if (ig) {
-    return `<div class="reel-window"><iframe src="${esc(ig)}" title="${esc(a.name)} on Instagram" loading="lazy" scrolling="no" allowtransparency="true" allow="autoplay; encrypted-media; picture-in-picture; web-share"></iframe></div>`;
+    const h = REEL_HEIGHTS[a.slug];
+    return `<div class="reel-window"${h ? ` style="height:${h}px;"` : ""}><iframe src="${esc(ig)}" title="${esc(a.name)} on Instagram" loading="lazy" scrolling="no" allowtransparency="true" allow="autoplay; encrypted-media; picture-in-picture; web-share"></iframe></div>`;
   }
   if (a.spotify_url) {
     const src = a.spotify_url.replace("open.spotify.com/artist/", "open.spotify.com/embed/artist/") + "?theme=0";
@@ -298,6 +303,36 @@ async function openDiscography(slug, name) {
     body.innerHTML = `<p class="loading">${esc(String(e.message || e))}</p>`;
   }
 }
+
+// ---- One player at a time ---------------------------------------------------
+// The reels and Spotify players are third-party iframes, so the page can't
+// tell them to pause. What it can see is which iframe has focus: clicking
+// inside a player gives that iframe focus (document.activeElement). When a
+// different player gets focus, the one used before is reset by reloading it,
+// which stops its sound, so two songs never play over each other.
+// Focus moving straight from one iframe to another fires no event on this
+// page, so we also check activeElement a few times a second.
+let activePlayer = null;
+
+function stopPlayer(frame) {
+  if (!frame || !frame.isConnected) return;
+  // Swap in a brand-new copy of the player. Re-pointing the old iframe's src
+  // sometimes left it blank in Chrome; a fresh element always loads cleanly.
+  const fresh = frame.cloneNode(false);
+  fresh.removeAttribute("loading");
+  frame.replaceWith(fresh);
+}
+
+function checkActivePlayer() {
+  const el = document.activeElement;
+  if (!el || el.tagName !== "IFRAME" || !el.closest(".reel-window")) return;
+  if (el === activePlayer) return;
+  if (activePlayer) stopPlayer(activePlayer);
+  activePlayer = el;
+}
+
+window.addEventListener("blur", () => setTimeout(checkActivePlayer, 0));
+setInterval(checkActivePlayer, 250);
 
 document.addEventListener("DOMContentLoaded", () => {
   loadArtists();

@@ -337,6 +337,12 @@ setInterval(checkActivePlayer, 250);
 document.addEventListener("DOMContentLoaded", () => {
   loadArtists();
   document.getElementById("refresh-btn").addEventListener("click", refreshStats);
+  // "Refresh stats" is an admin tool that only works from this computer
+  // (the server rejects it elsewhere), so hide it on the public site.
+  if (!["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)) {
+    document.getElementById("refresh-btn").hidden = true;
+    document.getElementById("refresh-note").hidden = true;
+  }
   // Reel rail arrows: scroll by roughly one card.
   document.querySelectorAll(".rail-btn").forEach((b) => b.addEventListener("click", () => {
     const rail = document.getElementById("artist-grid");

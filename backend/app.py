@@ -50,6 +50,39 @@ async def revalidate_static(request: Request, call_next):
 
 db.init_db()
 
+# How old the newest stats snapshot can be before the server fetches fresh
+# ones when it starts. On a host that sleeps when idle (e.g. Render's free
+# tier) every wake-up is a start, so stats stay current without a scheduler.
+STALE_AFTER_HOURS = float(os.environ.get("STALE_AFTER_HOURS", "12"))
+
+
+def _refresh_if_stale():
+    from datetime import datetime, timedelta, timezone
+
+    try:
+        conn = db.connect()
+        row = conn.execute(
+            "SELECT MAX(s.captured_at) AS last FROM snapshots s "
+            "JOIN artists a ON a.id = s.artist_id WHERE a.week_of = ?",
+            (db.latest_week(),),
+        ).fetchone()
+        conn.close()
+        last = row["last"] if row else None
+        if last and datetime.now(timezone.utc) - datetime.fromisoformat(last) < timedelta(hours=STALE_AFTER_HOURS):
+            return
+        refresh.refresh_week()
+        print("Startup refresh: stats snapshot taken.")
+    except Exception as e:  # noqa: BLE001 - never block startup on a fetch problem
+        print(f"Startup refresh skipped: {type(e).__name__}")
+
+
+@app.on_event("startup")
+def _startup_refresh():
+    import threading
+
+    # Run in the background so the site starts serving immediately.
+    threading.Thread(target=_refresh_if_stale, daemon=True).start()
+
 
 @app.get("/")
 def index():

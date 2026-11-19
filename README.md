@@ -45,6 +45,23 @@ Put these in `.env` (copied from `.env.example`):
 Keys are used **only** server-side in `backend/refresh.py`. They are never sent
 to the browser, so they stay private even though the site itself is static.
 
+## Deploying (Render)
+
+The repo is public, so it deploys on [Render](https://render.com) as a
+**Web Service → Public Git Repository** (`https://github.com/carterpatwill/JackMusic`):
+
+| Setting | Value |
+|---|---|
+| Runtime | Python 3 |
+| Build command | `pip install -r requirements.txt` |
+| Start command | `uvicorn backend.app:app --host 0.0.0.0 --port $PORT` |
+| Environment | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `YOUTUBE_API_KEY`, `ADMIN_TOKEN` (any random string) |
+
+On start the server fetches fresh stats if the newest snapshot is older than
+`STALE_AFTER_HOURS` (default 12), so a new deploy isn't empty. The
+"Refresh stats" button only shows on localhost. Render's free disk is wiped on
+each deploy, so the database (and trend history) starts over then.
+
 ## Publishing a new week
 
 1. Edit `backend/seed.py` — update `CURRENT_WEEK`, `CURRENT_WEEK_LABEL`, and the

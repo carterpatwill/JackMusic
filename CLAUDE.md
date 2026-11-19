@@ -42,7 +42,10 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
 - A snapshot is one row per artist per refresh. No trend appears until there
   is a snapshot ~a week older than the latest one; refreshing more often is
   fine (it always compares against ~a week back).
-- Refresh is **manual** (a button). No cron/scheduler by design.
+- Refresh is **manual** (a button, shown on localhost only). No cron/scheduler
+  by design; on startup the server also refreshes if the newest snapshot is
+  older than `STALE_AFTER_HOURS` (default 12), which keeps a sleeping free-tier
+  host current. Deployment notes are in README ("Deploying (Render)").
 
 ## Files
 

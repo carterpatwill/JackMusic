@@ -7,7 +7,7 @@ Endpoints
     GET  /api/artists      -> current week's artists + real stats/trend
     GET  /api/weeks        -> list of available weeks (for the archive)
     POST /api/refresh      -> fetch live stats, store a snapshot (admin-only)
-    POST /api/subscribe    -> store a newsletter email
+    POST /api/subscribe    -> add an email to the Kit newsletter list
 
 The refresh endpoint is protected by ADMIN_TOKEN so random visitors can't
 trigger API calls. Set it in .env; if unset, refresh is allowed from
@@ -29,7 +29,7 @@ try:
 except ImportError:  # dotenv optional at runtime
     pass
 
-from . import db, refresh, spotify
+from . import db, newsletter, refresh, spotify
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 FRONTEND = os.path.join(ROOT, "frontend")
@@ -149,7 +149,18 @@ def api_subscribe(payload: SubscribeIn):
     email = (payload.email or "").strip()
     if "@" not in email or "." not in email:
         raise HTTPException(status_code=400, detail="Please enter a valid email.")
+    # Local copy first (a backup; Render's free disk is wiped on redeploy).
     created = db.add_subscriber(email)
+    # Kit holds the real mailing list. Skipped if KIT_API_KEY isn't set.
+    if newsletter.configured():
+        try:
+            newsletter.subscribe(email)
+        except newsletter.NewsletterError as e:
+            print(f"Kit signup failed: {e}")
+            raise HTTPException(
+                status_code=502,
+                detail="Couldn't add you to the list right now. Please try again in a minute.",
+            )
     return {"ok": True, "created": created}
 
 

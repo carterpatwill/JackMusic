@@ -221,7 +221,7 @@ async function subscribe() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Signup failed");
-    msg.textContent = data.created ? "You're on the list!" : "You're already subscribed.";
+    msg.textContent = "You're on the list! Watch your inbox for the next drop.";
     input.value = "";
   } catch (e) {
     msg.textContent = String(e.message || e);

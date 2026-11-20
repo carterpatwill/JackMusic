@@ -38,6 +38,7 @@
         <p class="invest-q">Today's independents, tomorrow's superstars.</p>
       </div>
     </div>
+    <div class="scroll-cue" aria-hidden="true"><span></span></div>
   </header>
 
   <!-- The rest of the site scrolls up over the hero -->
@@ -67,7 +68,7 @@
   <!-- Artists -->
   <div id="artists" class="wrap section">
 
-    <div id="picks" class="week-head" style="margin-top: 8px;">
+    <div id="picks" class="week-head" data-reveal style="margin-top: 8px;">
       <h2 class="heading" style="margin:0;">This Week's Artists</h2>
       <div style="text-align:right;">
         <button id="refresh-btn" class="btn-refresh" type="button">↻ Refresh stats</button>
@@ -76,7 +77,7 @@
     </div>
     <p id="week-date" class="week-date"></p>
 
-    <div id="featured"></div>
+    <div id="featured" data-reveal></div>
     <div class="rail-head">
       <p class="rail-title">More picks this week <span>Swipe through, press play</span></p>
       <div class="rail-arrows">
@@ -91,24 +92,24 @@
 
   <!-- Approach / Criteria -->
   <div id="approach" class="wrap section">
-    <h2 class="heading" style="margin-bottom:40px;">My Criteria</h2>
+    <h2 class="heading" data-reveal style="margin-bottom:40px;">My Criteria</h2>
     <div class="criteria-grid">
-      <div class="criteria">
+      <div class="criteria" data-reveal>
         <p class="num">01</p>
         <h3>It starts with the music</h3>
         <p>The music has to catch my ear, a unique voice, a great lyricist, and high quality production, these are all things I look for when investing in an artist.</p>
       </div>
-      <div class="criteria">
+      <div class="criteria" data-reveal>
         <p class="num">02</p>
         <h3>Independent artists only</h3>
         <p>Quigley Discovery only invests in independent artists and offers an independence guarantee that none of the featured artists are signed to record deals.</p>
       </div>
-      <div class="criteria">
+      <div class="criteria" data-reveal>
         <p class="num">03</p>
         <h3>A world, beyond the song</h3>
         <p>The artists I invest in are building something bigger than one song: a visual identity, a consistent release cadence, a world people want to follow, not just a track they stream once.</p>
       </div>
-      <div class="criteria">
+      <div class="criteria" data-reveal>
         <p class="num">04</p>
         <h3>What am I willing to invest?</h3>
         <p>What am I willing to invest in this artist? A playlist add? A follow? Sharing with a friend? Purchasing merch? Buying a concert ticket?</p>
@@ -119,14 +120,14 @@
   <!-- About -->
   <div id="about" class="wrap section">
     <div class="about-grid">
-      <div class="about">
+      <div class="about" data-reveal>
         <h2 class="heading" style="margin-bottom:20px;">About Quigley Discovery</h2>
         <p>Quigley Discovery is an independent music discovery platform, direct to consumer, based in Los Angeles.</p>
         <p style="margin-bottom:0;">Our focus is on finding independent artists who may not be on your radar and don't deserve to stay that way. We can change that together.</p>
       </div>
-      <div class="stats-box">
+      <div class="stats-box" data-reveal>
         <div>
-          <p class="big" style="font-size:34px;">5 artists each week</p>
+          <p class="big" data-count="5" data-suffix=" artists each week" style="font-size:34px;">5 artists each week</p>
           <p class="label">Each week I find 5 independent artists worth your time</p>
         </div>
         <div>
@@ -144,7 +145,7 @@
 
   <!-- Contact -->
   <div id="contact" class="wrap section">
-    <div class="contact-card">
+    <div class="contact-card" data-reveal>
       <h2>Let's talk music.</h2>
       <p>If you're an artist, a label, a manager, or a listener and want to talk, reach out directly.</p>
       <a href="mailto:quigley.discovery@gmail.com" class="email">quigley.discovery@gmail.com</a>
@@ -153,7 +154,7 @@
 
   <!-- Signup -->
   <div id="jackpot-signup" class="wrap section">
-    <div class="signup-grid">
+    <div class="signup-grid" data-reveal>
       <div>
         <h2 class="heading" style="font-size:clamp(25px,3vw,32px); margin-bottom:16px;">Don't miss out on the next drop!</h2>
         <p class="subcopy" style="margin-bottom:16px;">Sign up and the Quigley Discovery picks land straight in your inbox.</p>
@@ -178,5 +179,6 @@
 
 </div>
 <script src="/app.js"></script>
+<script src="/scroll.js"></script>
 </body>
 </html>

@@ -62,7 +62,7 @@ a:hover { opacity: 0.8; }
   display: flex; align-items: center; justify-content: center;
 }
 .hero-bg { position: absolute; inset: 0; z-index: 0; }
-.hero-bg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-bg img { width: 100%; height: 100%; object-fit: cover; display: block; will-change: transform; }
 .hero-bg .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,12,8,0.35), rgba(10,12,8,0.82)); }
 .hero-inner { position: relative; z-index: 1; width: 100%; max-width: var(--max); margin: 0 auto; padding: 0 var(--pad); text-align: center; }
 
@@ -72,6 +72,25 @@ a:hover { opacity: 0.8; }
 .over-spacer { height: 100vh; height: 100svh; }
 .over-content { position: relative; z-index: 1; overflow: clip; }
 .over-bg { position: absolute; inset: 0; z-index: -2; background: var(--bg); }
+
+/* Scroll cue — a bouncing chevron at the base of the hero; JS fades it out */
+.scroll-cue { position: absolute; left: 50%; bottom: 30px; z-index: 2; transform: translateX(-50%); transition: opacity .3s ease; }
+.scroll-cue span { display: block; width: 16px; height: 16px; border-right: 2px solid rgba(255,251,241,.85); border-bottom: 2px solid rgba(255,251,241,.85); animation: cue-bounce 1.8s ease-in-out infinite; }
+@keyframes cue-bounce {
+  0%, 100% { transform: rotate(45deg) translate(-3px, -3px); opacity: .4; }
+  50%      { transform: rotate(45deg) translate(3px, 3px);   opacity: 1; }
+}
+
+/* Reveal on scroll — only active once scroll.js adds .reveal-on to <html> */
+.reveal-on [data-reveal] { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s cubic-bezier(.22,.61,.36,1); }
+.reveal-on [data-reveal].is-in { opacity: 1; transform: none; }
+.reveal-on .criteria-grid .criteria[data-reveal]:nth-child(2) { transition-delay: .08s; }
+.reveal-on .criteria-grid .criteria[data-reveal]:nth-child(3) { transition-delay: .16s; }
+.reveal-on .criteria-grid .criteria[data-reveal]:nth-child(4) { transition-delay: .24s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue span { animation: none; }
+}
 .hero h1 { font-family: 'Archivo Black', sans-serif; font-size: clamp(46px, 7vw, 87px); line-height: 1.02; letter-spacing: -0.01em; margin: 0 0 16px 0; text-wrap: balance; color: #FFFBF1; }
 .hero .invest-q { font-size: clamp(27px, 3.6vw, 41px); line-height: 1.3; color: var(--green-deep); margin: 0 auto; max-width: 640px; font-family: 'Sorean', serif; }
 .hero .lede { font-size: 23px; line-height: 1.7; color: #D8D2B8; margin: 0 0 28px 0; max-width: 640px; }

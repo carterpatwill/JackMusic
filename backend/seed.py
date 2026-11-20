@@ -11,8 +11,8 @@ the archive (/archive.html). (`--reseed` wipes every week; avoid it once there
 is history you want to keep.)
 """
 
-CURRENT_WEEK = "2026-11-07"
-CURRENT_WEEK_LABEL = "Week of Nov 7, 2026"
+CURRENT_WEEK = "2026-11-16"
+CURRENT_WEEK_LABEL = "Week of Nov 16, 2026"
 
 # Site-level brand images (not tied to one artist)
 HERO_IMAGE = "4f12d7bf223e102db5eb1f722bebd02e.jpg"
@@ -60,7 +60,7 @@ ARTISTS = [
         "profile_href": "/artist-ianbolen.html",
         "invest_href": "/invest.html?artist=ian-bolen",
         "is_featured": 0,
-        "sort_order": 1,
+        "sort_order": 3,
     },
     {
         "slug": "themba",
@@ -77,7 +77,7 @@ ARTISTS = [
         "profile_href": "/artist-themba.html",
         "invest_href": "/invest.html?artist=themba",
         "is_featured": 0,
-        "sort_order": 2,
+        "sort_order": 1,
     },
     {
         "slug": "doov",
@@ -94,7 +94,7 @@ ARTISTS = [
         "profile_href": "/artist-doov.html",
         "invest_href": "/invest.html?artist=doov",
         "is_featured": 0,
-        "sort_order": 3,
+        "sort_order": 4,
     },
     {
         "slug": "tomb",
@@ -111,6 +111,6 @@ ARTISTS = [
         "profile_href": "/artist-tomb.html",
         "invest_href": "/invest.html?artist=tomb",
         "is_featured": 0,
-        "sort_order": 4,
+        "sort_order": 2,
     },
 ]

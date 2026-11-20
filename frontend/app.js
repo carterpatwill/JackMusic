@@ -1,7 +1,7 @@
 // Quigley Discovery front-end: fetches artists + real stats from the API
 // and renders the featured pick and the grid. No framework, no build step.
 
-const WEEK_LABELS = { "2026-11-07": "Week of Nov 7, 2026" };
+const WEEK_LABELS = { "2026-11-16": "Week of Nov 16, 2026" };
 
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => (

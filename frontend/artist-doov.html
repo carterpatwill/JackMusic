@@ -107,12 +107,21 @@ iframe { border: none; display: block; width: 100%; aspect-ratio: 16 / 9; border
 <script>
 (function () {
   var shareBtn = document.getElementById('share-btn');
-  var shareBlurb = "Doov — pioneering DANCERAP, catchy songs and consistent releases, huge streaming momentum. Discovered via Quigley Discovery: ";
-  var pageUrl = 'artist-doov.html';
+  // Opens the phone's share sheet (Messages, etc.) with the artist's
+  // Instagram, same as the Invest page. Desktop browsers without a share
+  // sheet copy the link instead.
+  var igUrl = 'https://www.instagram.com/itsdoov/';
+  var shareText = 'Check out Doov, discovered via Quigley Discovery';
   shareBtn.addEventListener('click', async function () {
-    try { await navigator.clipboard.writeText(shareBlurb + pageUrl); } catch (e) {}
-    shareBtn.textContent = 'Copied!';
-    setTimeout(function () { shareBtn.textContent = 'Share this artist'; }, 2000);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Doov', text: shareText, url: igUrl });
+      } else {
+        await navigator.clipboard.writeText(shareText + ': ' + igUrl);
+        shareBtn.textContent = 'Link copied!';
+        setTimeout(function () { shareBtn.textContent = 'Share this artist'; }, 2000);
+      }
+    } catch (e) { /* share sheet closed */ }
   });
 
   var copyBtn = document.getElementById('copy-badge-btn');

@@ -7,6 +7,7 @@ Endpoints
     GET  /api/artists      -> current week's artists + real stats/trend
     GET  /api/weeks        -> list of available weeks (for the archive)
     POST /api/refresh      -> fetch live stats, store a snapshot (admin-only)
+    GET  /api/artist/{slug}/history -> data for the profile charts
     POST /api/subscribe    -> add an email to the Kit newsletter list
 
 The refresh endpoint is protected by ADMIN_TOKEN so random visitors can't
@@ -29,7 +30,7 @@ try:
 except ImportError:  # dotenv optional at runtime
     pass
 
-from . import db, newsletter, refresh, spotify
+from . import db, history, newsletter, refresh, spotify
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 FRONTEND = os.path.join(ROOT, "frontend")
@@ -68,12 +69,22 @@ def _refresh_if_stale():
         ).fetchone()
         conn.close()
         last = row["last"] if row else None
-        if last and datetime.now(timezone.utc) - datetime.fromisoformat(last) < timedelta(hours=STALE_AFTER_HOURS):
-            return
-        refresh.refresh_week()
-        print("Startup refresh: stats snapshot taken.")
+        if not last or datetime.now(timezone.utc) - datetime.fromisoformat(last) >= timedelta(hours=STALE_AFTER_HOURS):
+            refresh.refresh_week()
+            print("Startup refresh: stats snapshot taken.")
     except Exception as e:  # noqa: BLE001 - never block startup on a fetch problem
         print(f"Startup refresh skipped: {type(e).__name__}")
+    # Warm the chart caches (YouTube/Instagram/Spotify) so the first visitor
+    # to a profile doesn't wait on those APIs. Only on the host (Render sets
+    # RENDER): locally, --reload restarts would burn Meta's small hourly quota.
+    if not (os.environ.get("RENDER") or os.environ.get("WARM_CACHES")):
+        return
+    try:
+        for a in db.get_artists_for_week():
+            history.artist_history(a["slug"])
+        print("Startup: profile chart data cached.")
+    except Exception as e:  # noqa: BLE001
+        print(f"Startup chart warm-up skipped: {type(e).__name__}")
 
 
 @app.on_event("startup")
@@ -116,6 +127,17 @@ def api_artist_spotify(slug: str):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"Spotify fetch failed: {e}")
+
+
+@app.get("/api/artist/{slug}/history")
+def api_artist_history(slug: str):
+    """Everything the profile's "Explore the Data" charts need: YouTube upload
+    history (publish date + current views per video), Spotify release dates,
+    and our stored stats snapshots over time."""
+    data = history.artist_history(slug)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Unknown artist.")
+    return data
 
 
 def _authorized(request: Request, token: Optional[str]) -> bool:

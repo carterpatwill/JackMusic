@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 import requests
 
-from . import db
+from . import db, instagram
 
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 SPOTIFY_ARTIST_URL = "https://api.spotify.com/v1/artists/{id}"
@@ -73,6 +73,19 @@ def _extract_video_id(url):
         return None
     m = _VIDEO_ID_RE.search(url)
     return m.group(1) if m else None
+
+
+_CHANNEL_ID_RE = re.compile(r"youtube\.com/channel/(UC[A-Za-z0-9_-]{22})")
+
+
+def channel_id_from_url(api_key, url):
+    """youtube_url in seed.py may be a channel URL (youtube.com/channel/UC...)
+    or any video URL, in which case the video's channel is looked up."""
+    m = _CHANNEL_ID_RE.search(url or "")
+    if m:
+        return m.group(1)
+    vid = _extract_video_id(url)
+    return _yt_channel_id_from_video(api_key, vid) if vid else None
 
 
 def _yt_channel_id_from_video(api_key, video_id):
@@ -141,32 +154,40 @@ def refresh_week(week_of=None):
         if yt_key and ar["youtube_url"]:
             try:
                 if not channel_id:
-                    vid = _extract_video_id(ar["youtube_url"])
-                    if vid:
-                        channel_id = _yt_channel_id_from_video(yt_key, vid)
-                        if channel_id:
-                            conn.execute(
-                                "UPDATE artists SET youtube_channel_id = ? WHERE id = ?",
-                                (channel_id, ar["id"]),
-                            )
+                    channel_id = channel_id_from_url(yt_key, ar["youtube_url"])
+                    if channel_id:
+                        conn.execute(
+                            "UPDATE artists SET youtube_channel_id = ? WHERE id = ?",
+                            (channel_id, ar["id"]),
+                        )
                 if channel_id:
                     yt = _yt_channel_stats(yt_key, channel_id)
                     subs, views = yt["subs"], yt["views"]
             except Exception as e:  # noqa: BLE001
                 entry["errors"].append(f"youtube: {e}")
 
+        # --- Instagram (follower count via Business Discovery) ---
+        ig_followers = None
+        ig_user = instagram.username_from_url(ar["instagram_url"])
+        if ig_user and instagram.configured():
+            try:
+                ig_followers = instagram.followers(ig_user)
+            except Exception as e:  # noqa: BLE001
+                entry["errors"].append(f"instagram: {e}")
+
         conn.execute(
             """INSERT INTO snapshots
                  (artist_id, captured_at, spotify_followers, spotify_popularity,
-                  youtube_subs, youtube_views)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (ar["id"], now, followers, popularity, subs, views),
+                  youtube_subs, youtube_views, instagram_followers)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (ar["id"], now, followers, popularity, subs, views, ig_followers),
         )
         entry.update(
             spotify_followers=followers,
             spotify_popularity=popularity,
             youtube_subs=subs,
             youtube_views=views,
+            instagram_followers=ig_followers,
         )
         results.append(entry)
 

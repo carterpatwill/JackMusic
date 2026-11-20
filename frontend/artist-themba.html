@@ -71,20 +71,7 @@ iframe { border: none; display: block; width: 100%; aspect-ratio: 16 / 9; border
 
 
   <h2 style="font-family: 'Archivo Black', sans-serif; font-size: 22px; margin: 0 0 16px 0; color: #2F5D3A;">Explore the Data</h2>
-  <div style="background: #FFFBF1; border: 1px solid rgba(44,52,32,0.14); border-radius: 16px; padding: 24px; margin-bottom: 40px;">
-    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
-      <select id="series-select" style="font-size: 14px; font-weight: 700; color: #2F5D3A; background: #F5EFDC; border: 1px solid rgba(44,52,32,0.2); border-radius: 999px; padding: 8px 14px;">
-        <option value="Spotify monthly listeners">Spotify monthly listeners</option>
-        <option value="YouTube subscribers">YouTube subscribers</option>
-        <option value="YouTube views">YouTube views</option>
-      </select>
-    </div>
-    <div style="text-align: center; padding: 28px 0 8px 0;">
-      <p id="chart-value" style="font-family: 'Archivo Black', sans-serif; font-size: 36px; color: #2F5D3A; margin: 0;">32,700</p>
-      <p id="chart-date" style="font-size: 13px; color: #8A8273; margin: 8px 0 0 0;">First snapshot, logged Nov 12, 2026. History builds week by week as the pipeline keeps running.</p>
-    </div>
-  </div>
-  <p style="font-size: 13px; color: #8A8273; margin: -20px 0 32px 0;">Live cross-platform tracker for Themba! — new points are added automatically each week.</p>
+  <div id="explore-data" data-slug="themba"></div>
 
   <h2 style="font-family: 'Archivo Black', sans-serif; font-size: 22px; margin: 0 0 16px 0; color: #2F5D3A;">Watch</h2>
   <div style="margin-bottom: 16px;">
@@ -93,7 +80,7 @@ iframe { border: none; display: block; width: 100%; aspect-ratio: 16 / 9; border
 
   <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 40px;">
     <a href="https://youtu.be/y43o6mVcnL4?si=lgsZPemz0tMBEzfY" style="font-size: 15px; font-weight: 700; color: #2F5D3A; background: #FFFBF1; border: 1px solid rgba(44,52,32,0.14); padding: 10px 18px; border-radius: 999px;">YouTube →</a>
-    <a href="https://www.instagram.com/thembaaaaaaaaaa/" style="font-size: 15px; font-weight: 700; color: #2F5D3A; background: #FFFBF1; border: 1px solid rgba(44,52,32,0.14); padding: 10px 18px; border-radius: 999px;">Instagram →</a>
+    <a href="https://www.instagram.com/thembaaaaa/" style="font-size: 15px; font-weight: 700; color: #2F5D3A; background: #FFFBF1; border: 1px solid rgba(44,52,32,0.14); padding: 10px 18px; border-radius: 999px;">Instagram →</a>
   </div>
 
   <h2 style="font-family: 'Archivo Black', sans-serif; font-size: 22px; margin: 0 0 16px 0; color: #2F5D3A;">Listen</h2>
@@ -115,28 +102,12 @@ iframe { border: none; display: block; width: 100%; aspect-ratio: 16 / 9; border
     <button id="copy-badge-btn" style="font-size: 14px; font-weight: 700; color: #2F5D3A; background: #FFFBF1; border: 1px solid rgba(44,52,32,0.14); padding: 10px 16px; border-radius: 999px; white-space: nowrap; cursor: pointer;">Copy embed</button>
   </div>
 
-  <p style="font-size: 13px; color: #8A8273; margin: 0 0 0 0; font-style: italic;">Photos and cover art from Themba!'s Spotify. More on Instagram (<a href="https://www.instagram.com/thembaaaaaaaaaa/" style="color: #8A8273; text-decoration: underline;">@thembaaaaaaaaaa</a>).</p>
+  <p style="font-size: 13px; color: #8A8273; margin: 0 0 0 0; font-style: italic;">Photos and cover art from Themba!'s Spotify. More on Instagram (<a href="https://www.instagram.com/thembaaaaa/" style="color: #8A8273; text-decoration: underline;">@thembaaaaaaaaaa</a>).</p>
 
 </div>
 </div>
 <script>
 (function () {
-  var seriesData = {
-    'Spotify monthly listeners': { date: 'Nov 12, 2026', value: 32700 },
-    'YouTube subscribers': { date: 'Nov 11, 2026', value: 370 },
-    'YouTube views': { date: 'Nov 11, 2026', value: 72394 }
-  };
-  var select = document.getElementById('series-select');
-  var valueEl = document.getElementById('chart-value');
-  var dateEl = document.getElementById('chart-date');
-  function render() {
-    var d = seriesData[select.value];
-    valueEl.textContent = d.value.toLocaleString('en-US');
-    dateEl.textContent = 'First snapshot, logged ' + d.date + '. History builds week by week as the pipeline keeps running.';
-  }
-  select.addEventListener('change', render);
-  render();
-
   var shareBtn = document.getElementById('share-btn');
   var shareBlurb = "Themba! — Electronic Swag Rap with a really unique sound and look, good distribution of streams. Discovered via Quigley Discovery: ";
   var pageUrl = 'artist-themba.html';
@@ -156,5 +127,6 @@ iframe { border: none; display: block; width: 100%; aspect-ratio: 16 / 9; border
 })();
 </script>
 <script src="/profile-photos.js" data-slug="themba" defer></script>
+<script src="/profile-data.js" defer></script>
 </body>
 </html>

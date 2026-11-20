@@ -55,20 +55,45 @@ The repo is public, so it deploys on [Render](https://render.com) as a
 | Runtime | Python 3 |
 | Build command | `pip install -r requirements.txt` |
 | Start command | `uvicorn backend.app:app --host 0.0.0.0 --port $PORT` |
-| Environment | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `YOUTUBE_API_KEY`, `ADMIN_TOKEN` (any random string) |
+| Environment | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `YOUTUBE_API_KEY`, `ADMIN_TOKEN` (any random string), `DATABASE_URL` (Neon Postgres), `KIT_API_KEY`, `KIT_FORM_ID`, `RESEND_API_KEY`, `NOTIFY_EMAIL` |
 
 On start the server fetches fresh stats if the newest snapshot is older than
 `STALE_AFTER_HOURS` (default 12), so a new deploy isn't empty. The
-"Refresh stats" button only shows on localhost. Render's free disk is wiped on
-each deploy, so the database (and trend history) starts over then.
+"Refresh stats" button only shows on localhost.
+
+**Database:** with `DATABASE_URL` set (a free [Neon](https://neon.tech)
+Postgres), stats history, artists and subscribers persist across deploys,
+which the week-over-week trend and the profile "Explore the Data" charts rely
+on. Without it the server uses the local `data.db` SQLite file, which
+Render's free disk wipes on every deploy.
+
+## Instagram data
+
+Profile charts and weekly snapshots can include Instagram (followers, and
+likes / comments / Reel views per post) through Meta's free **Business
+Discovery** API. Artists' accounts must be Business or Creator accounts.
+
+1. Our Instagram account must be a Business or Creator account, linked to a
+   Facebook Page.
+2. At developers.facebook.com create an app (type: Business), add the
+   "Instagram Graph API" product, and copy the App ID and App Secret.
+3. In the Graph API Explorer, pick the app, add permissions `instagram_basic`, `instagram_manage_insights`,
+   `pages_show_list`, `pages_read_engagement`, `business_management`, and
+   generate a user token.
+4. Put `META_APP_ID`, `META_APP_SECRET` and that token as `IG_SETUP_TOKEN` in
+   `.env`, then run `python -m backend.instagram --setup`. It writes a
+   non-expiring `IG_ACCESS_TOKEN` and `IG_USER_ID` to `.env`; add those two to
+   Render's Environment.
 
 ## Publishing a new week
 
 1. Edit `backend/seed.py` — update `CURRENT_WEEK`, `CURRENT_WEEK_LABEL`, and the
    `ARTISTS` list.
-2. Publish it: `python -m backend.db --publish` (adds the new week and keeps
-   every earlier week, which then appears on the archive page, `/archive.html`).
-   `--reseed` still exists but wipes all weeks and their stats history.
+2. Push it. On startup the server syncs `seed.py` into the database: new
+   artists (matched by slug) are added, existing ones get their details
+   updated, and every earlier week stays for the archive (`/archive.html`).
+   Locally, `python -m backend.db --publish` does the same sync without a
+   restart. `--reseed` still exists but wipes all weeks and their stats history.
 3. Start the server and click **Refresh stats** twice (over the week) to build
    trend history.
 
@@ -77,7 +102,8 @@ each deploy, so the database (and trend history) starts over then.
 ```
 backend/
   app.py       FastAPI app — serves the site + JSON API
-  db.py        SQLite schema, seeding, trend-% query
+  db.py        schema (SQLite or Postgres), seed sync, trend-% query
+  history.py   data for the profile charts (YouTube uploads, releases, snapshots)
   refresh.py   fetches Spotify/YouTube stats (holds the keys)
   seed.py      the artist roster (edit this each week)
 frontend/

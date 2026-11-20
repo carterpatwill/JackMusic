@@ -1,12 +1,18 @@
-"""SQLite layer: schema, seeding, and the queries that compute the real
+"""Database layer: schema, seeding, and the queries that compute the real
 week-over-week trend from stored snapshots.
 
-The DB is a single file (data.db at the project root) and is created on
-first use. No ORM — just the stdlib sqlite3 module to keep the handoff
-dependency-light.
+Two backends, same code:
+- DATABASE_URL set (e.g. a free Neon Postgres): used in production so the
+  stats history survives redeploys (Render's free disk is wiped on each one).
+- Otherwise a local SQLite file (data.db at the project root), created on
+  first use. Handy for development; disposable.
+
+Queries are written once in SQLite style (`?` and `:name` placeholders);
+_PgConn translates them for Postgres. No ORM.
 """
 
 import os
+import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
@@ -15,7 +21,52 @@ from . import seed
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data.db")
 
 
+def _database_url():
+    return os.environ.get("DATABASE_URL", "").strip()
+
+
+def using_postgres():
+    return _database_url().startswith(("postgres://", "postgresql://"))
+
+
+_NAMED = re.compile(r"(?<!:):([A-Za-z_]\w*)")
+
+
+def _to_pg(sql):
+    sql = sql.replace("%", "%%").replace("?", "%s")
+    return _NAMED.sub(r"%(\1)s", sql)
+
+
+class _PgConn:
+    """Tiny sqlite3-style wrapper over psycopg: execute() / executescript() /
+    commit() / close(), rows readable as row["column"]."""
+
+    def __init__(self, url):
+        import psycopg
+        from psycopg.rows import dict_row
+
+        self._conn = psycopg.connect(url, row_factory=dict_row, connect_timeout=15)
+
+    def execute(self, sql, params=()):
+        return self._conn.execute(_to_pg(sql), params)
+
+    def executescript(self, script):
+        script = script.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
+        for stmt in script.split(";"):
+            if stmt.strip():
+                self._conn.execute(stmt)
+        self._conn.commit()
+
+    def commit(self):
+        self._conn.commit()
+
+    def close(self):
+        self._conn.close()
+
+
 def connect():
+    if using_postgres():
+        return _PgConn(_database_url())
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
@@ -51,7 +102,8 @@ CREATE TABLE IF NOT EXISTS snapshots (
     spotify_followers  INTEGER,
     spotify_popularity INTEGER,
     youtube_subs       INTEGER,
-    youtube_views      INTEGER
+    youtube_views      INTEGER,
+    instagram_followers INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_artist ON snapshots(artist_id, captured_at);
@@ -64,62 +116,81 @@ CREATE TABLE IF NOT EXISTS subscribers (
 """
 
 
+_ARTIST_FIELDS = (
+    "slug", "name", "week_of", "tag", "tag_color", "tag_bg", "bio", "spotify_id",
+    "youtube_url", "instagram_url", "card_photo", "title_font",
+    "profile_href", "invest_href", "is_featured", "sort_order",
+)
+
+
 def init_db():
+    """Create tables, then sync seed.py's artists into the DB.
+
+    Artists are matched by slug: new ones are inserted, existing ones get
+    their details (week, order, bio, links...) updated from seed.py. Earlier
+    weeks' artists, snapshots and subscribers are never touched. So with a
+    persistent database, editing seed.py and redeploying is all it takes."""
     conn = connect()
     conn.executescript(SCHEMA)
-    conn.commit()
-    # Seed artists only if the table is empty so we never clobber live data.
-    count = conn.execute("SELECT COUNT(*) AS c FROM artists").fetchone()["c"]
-    if count == 0:
-        _seed_artists(conn)
+    _migrate(conn)
+    sync_seed(conn)
     conn.close()
 
 
-def _seed_artists(conn):
+def _columns(conn, table):
+    if isinstance(conn, _PgConn):
+        rows = conn.execute(
+            "SELECT column_name AS name FROM information_schema.columns WHERE table_name = ?",
+            (table,),
+        ).fetchall()
+    else:
+        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    return {r["name"] for r in rows}
+
+
+def _migrate(conn):
+    """Add columns introduced after a database was first created."""
+    if "instagram_followers" not in _columns(conn, "snapshots"):
+        conn.execute("ALTER TABLE snapshots ADD COLUMN instagram_followers INTEGER")
+    conn.commit()
+
+
+def sync_seed(conn):
+    """Upsert seed.ARTISTS (this week's drop). Returns how many are new."""
+    cols = ", ".join(_ARTIST_FIELDS)
+    vals = ", ".join(f":{f}" for f in _ARTIST_FIELDS)
+    updates = ", ".join(f"{f} = excluded.{f}" for f in _ARTIST_FIELDS if f != "slug")
+    existing = {r["slug"] for r in conn.execute("SELECT slug FROM artists").fetchall()}
     for a in seed.ARTISTS:
+        row = {f: a.get(f) for f in _ARTIST_FIELDS}
+        row["week_of"] = seed.CURRENT_WEEK
+        # A changed YouTube link must re-resolve its channel.
         conn.execute(
-            """
-            INSERT INTO artists
-              (slug, name, week_of, tag, tag_color, tag_bg, bio, spotify_id,
-               youtube_url, instagram_url, card_photo, title_font,
-               profile_href, invest_href, is_featured, sort_order)
-            VALUES
-              (:slug, :name, :week_of, :tag, :tag_color, :tag_bg, :bio, :spotify_id,
-               :youtube_url, :instagram_url, :card_photo, :title_font,
-               :profile_href, :invest_href, :is_featured, :sort_order)
-            """,
-            {**a, "week_of": seed.CURRENT_WEEK},
+            "UPDATE artists SET youtube_channel_id = NULL "
+            "WHERE slug = :slug AND COALESCE(youtube_url, '') <> COALESCE(:youtube_url, '')",
+            row,
+        )
+        conn.execute(
+            f"INSERT INTO artists ({cols}) VALUES ({vals}) "
+            f"ON CONFLICT(slug) DO UPDATE SET {updates}",
+            row,
         )
     conn.commit()
+    return sum(1 for a in seed.ARTISTS if a["slug"] not in existing)
+
+
+def _seed_artists(conn):
+    sync_seed(conn)
 
 
 def publish_week():
-    """Add seed.py's current week WITHOUT touching earlier weeks, so the
-    archive (/archive.html) keeps every past drop and its stats history.
-    Artists already in the DB (matched by slug) are left as they are.
+    """Add/refresh seed.py's current week WITHOUT touching earlier weeks, so
+    the archive (/archive.html) keeps every past drop and its stats history.
+    (The server also does this on every startup.)
     Returns (week_of, number of artists added)."""
     conn = connect()
     conn.executescript(SCHEMA)
-    existing = {r["slug"] for r in conn.execute("SELECT slug FROM artists")}
-    added = 0
-    for a in seed.ARTISTS:
-        if a["slug"] in existing:
-            continue
-        conn.execute(
-            """
-            INSERT INTO artists
-              (slug, name, week_of, tag, tag_color, tag_bg, bio, spotify_id,
-               youtube_url, instagram_url, card_photo, title_font,
-               profile_href, invest_href, is_featured, sort_order)
-            VALUES
-              (:slug, :name, :week_of, :tag, :tag_color, :tag_bg, :bio, :spotify_id,
-               :youtube_url, :instagram_url, :card_photo, :title_font,
-               :profile_href, :invest_href, :is_featured, :sort_order)
-            """,
-            {**a, "week_of": seed.CURRENT_WEEK},
-        )
-        added += 1
-    conn.commit()
+    added = sync_seed(conn)
     conn.close()
     return seed.CURRENT_WEEK, added
 
@@ -276,18 +347,43 @@ def get_spotify_id(slug):
 
 def add_subscriber(email):
     conn = connect()
-    try:
-        conn.execute(
-            "INSERT INTO subscribers (email, subscribed_at) VALUES (?, ?)",
-            (email.strip().lower(), datetime.now(timezone.utc).isoformat()),
-        )
-        conn.commit()
-        created = True
-    except sqlite3.IntegrityError:
-        created = False  # already subscribed
-    finally:
-        conn.close()
+    cur = conn.execute(
+        "INSERT INTO subscribers (email, subscribed_at) VALUES (?, ?) "
+        "ON CONFLICT(email) DO NOTHING",
+        (email.strip().lower(), datetime.now(timezone.utc).isoformat()),
+    )
+    created = cur.rowcount == 1  # 0 = already subscribed
+    conn.commit()
+    conn.close()
     return created
+
+
+def get_artist(slug):
+    conn = connect()
+    row = conn.execute("SELECT * FROM artists WHERE slug = ?", (slug,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def set_channel_id(artist_id, channel_id):
+    conn = connect()
+    conn.execute(
+        "UPDATE artists SET youtube_channel_id = ? WHERE id = ?", (channel_id, artist_id)
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_snapshots(artist_id):
+    """Every stored snapshot for an artist, oldest first (for the growth line)."""
+    conn = connect()
+    rows = conn.execute(
+        "SELECT captured_at, youtube_views, youtube_subs, instagram_followers FROM snapshots "
+        "WHERE artist_id = ? ORDER BY captured_at ASC",
+        (artist_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 if __name__ == "__main__":
@@ -301,4 +397,4 @@ if __name__ == "__main__":
         print("Reseeded artists from backend/seed.py (all earlier weeks deleted)")
     else:
         init_db()
-        print(f"Initialized {DB_PATH}")
+        print("Initialized " + ("Postgres (DATABASE_URL)" if using_postgres() else DB_PATH))

@@ -23,7 +23,7 @@ with real data.
 
 - **Vanilla HTML/CSS/JS front end** — deliberately no framework/build step so
   the project is trivial to run and hand off (one ecosystem: Python).
-- **FastAPI + SQLite back end** — the backend exists for one reason: API keys
+- **FastAPI + SQLite/Postgres back end** — the backend exists for one reason: API keys
   can't live in a public page, and the trend % needs stored history. Running
   locally, keys sit in `.env` and never reach the browser.
 
@@ -50,11 +50,20 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
 ## Files
 
 - `backend/seed.py` — the artist roster + week metadata. **This is the file you
-  edit to publish a new week.** Then `python -m backend.db --publish`, which adds
-  the week and keeps earlier weeks for the archive. Artist slugs are UNIQUE
+  edit to publish a new week.** Push it: on startup `db.init_db()` syncs seed.py
+  into the DB (insert new slugs, update existing ones, never touch earlier
+  weeks). `python -m backend.db --publish` runs the same sync locally. Artist slugs are UNIQUE
   across all weeks, so each week's artists need new slugs.
-- `backend/db.py` — schema, seeding, trend query, subscribers. Stdlib sqlite3,
-  no ORM.
+- `backend/db.py` — schema, seed sync, trend query, subscribers. No ORM.
+  Uses Postgres when `DATABASE_URL` is set (production: free Neon, so history
+  survives Render redeploys), else the local `data.db` SQLite file. Queries are
+  written SQLite-style (`?`, `:name`); `_PgConn` translates them. Keep new SQL
+  portable to both (e.g. `ON CONFLICT`, not `INSERT OR IGNORE`).
+- `backend/history.py` + `frontend/profile-data.js` — profile "Explore the
+  Data" charts via `GET /api/artist/{slug}/history`: every YouTube upload
+  (publish date + current views; Topic channels fall back to search), Spotify
+  release dates, and stored snapshots. YouTube gives no past view counts, so
+  only the snapshot line is true growth over time.
 - `backend/refresh.py` — the ONLY place API keys are used. Spotify Client
   Credentials flow; YouTube resolves a channel id from the artist's video URL
   once and caches it on the artist row.
@@ -77,8 +86,9 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
   secrets. Never expose them to the front end.
 - Per-artist fetch failures are collected (not raised) so one bad lookup doesn't
   abort the whole refresh — see `refresh.refresh_week()` `errors` lists.
-- `data.db` and `.env` are gitignored. The DB is disposable; it rebuilds from
-  `seed.py`.
+- `data.db` and `.env` are gitignored. The local SQLite DB is disposable; it
+  rebuilds from `seed.py`. The production Postgres DB is NOT disposable (it
+  holds the stats history).
 - Image/font filenames in `assets/` are content hashes from the original design.
   Map artist → photo in `seed.py` (`card_photo`), not in markup.
 

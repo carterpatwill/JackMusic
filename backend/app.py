@@ -17,7 +17,7 @@ localhost only (fine for local dev).
 import os
 from typing import Optional
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -145,7 +145,7 @@ class SubscribeIn(BaseModel):
 
 
 @app.post("/api/subscribe")
-def api_subscribe(payload: SubscribeIn):
+def api_subscribe(payload: SubscribeIn, background: BackgroundTasks):
     email = (payload.email or "").strip()
     if "@" not in email or "." not in email:
         raise HTTPException(status_code=400, detail="Please enter a valid email.")
@@ -161,6 +161,9 @@ def api_subscribe(payload: SubscribeIn):
                 status_code=502,
                 detail="Couldn't add you to the list right now. Please try again in a minute.",
             )
+    # Email the site owner about the signup, after the response is sent.
+    if newsletter.notify_configured():
+        background.add_task(newsletter.notify_new_subscriber, email)
     return {"ok": True, "created": created}
 
 

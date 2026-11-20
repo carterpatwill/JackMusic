@@ -41,3 +41,40 @@ def subscribe(email):
                 raise NewsletterError(f"form {r.status_code}: {r.text[:200]}")
     except requests.RequestException as e:
         raise NewsletterError(type(e).__name__)
+
+
+# ---- "New subscriber" email to the site owner -----------------------------
+# Sent through Resend's HTTPS API, because Render's free tier blocks SMTP
+# (so Gmail SMTP can't work there).
+#   RESEND_API_KEY - Resend API key (resend.com -> API Keys).
+#   NOTIFY_EMAIL   - where to send it. With Resend's default sender
+#                    (onboarding@resend.dev) this must be the email your
+#                    Resend account was created with.
+#   NOTIFY_FROM    - optional sender, once a domain is verified in Resend.
+
+def notify_configured():
+    return bool(os.environ.get("RESEND_API_KEY") and os.environ.get("NOTIFY_EMAIL"))
+
+
+def notify_new_subscriber(email):
+    """Best effort: a failed notification never breaks the signup."""
+    sender = os.environ.get("NOTIFY_FROM") or "Quigley Discovery <onboarding@resend.dev>"
+    try:
+        r = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {os.environ['RESEND_API_KEY']}"},
+            json={
+                "from": sender,
+                "to": [os.environ["NOTIFY_EMAIL"]],
+                "subject": f"New newsletter signup: {email}",
+                "text": (
+                    f"{email} just signed up on quigleydiscovery.com.\n\n"
+                    "They've been added to your Kit list: https://app.kit.com/subscribers\n"
+                ),
+            },
+            timeout=15,
+        )
+        if r.status_code >= 400:
+            print(f"Signup notification failed: {r.status_code} {r.text[:200]}")
+    except requests.RequestException as e:
+        print(f"Signup notification failed: {type(e).__name__}")

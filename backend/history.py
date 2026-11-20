@@ -24,7 +24,6 @@ YT = "https://www.googleapis.com/youtube/v3"
 TIMEOUT = 15
 MAX_VIDEOS = 300
 _TTL = 6 * 3600
-_cache = {}  # channel_id -> (expires_ts, videos)
 
 
 class HistoryError(RuntimeError):
@@ -41,9 +40,22 @@ def _get(path, **params):
 def youtube_videos(channel_id):
     """Every upload on the channel: id, title, published (ISO), views.
     Oldest first."""
-    hit = _cache.get(channel_id)
-    if hit and hit[0] > time.time():
-        return hit[1]
+    key = f"youtube:videos:{channel_id}"
+    fresh = db.cache_get(key, max_age=_TTL)
+    if fresh is not None:
+        return fresh
+    try:
+        videos = _fetch_videos(channel_id)
+    except Exception:
+        stale = db.cache_get(key)
+        if stale is not None:
+            return stale
+        raise
+    db.cache_put(key, videos)
+    return videos
+
+
+def _fetch_videos(channel_id):
 
     items = _get("channels", part="contentDetails", id=channel_id).get("items", [])
     if not items:
@@ -81,7 +93,6 @@ def youtube_videos(channel_id):
                 "views": int(views) if views is not None else 0,
             })
     videos.sort(key=lambda v: v["published"])
-    _cache[channel_id] = (time.time() + _TTL, videos)
     return videos
 
 

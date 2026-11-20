@@ -71,7 +71,7 @@ ARTISTS = [
         "bio": "Electronic Swag Rap, early 2000s sound mixed with modern rap vocals. Themba! had a viral hit in late 2024 with Calling My Phone, with a really unique sound and look.",
         "spotify_id": "42rqSuMW9VQ8ccRKgpOZOD",
         "youtube_url": "https://youtu.be/y43o6mVcnL4?si=lgsZPemz0tMBEzfY",
-        "instagram_url": "https://www.instagram.com/thembaaaaa/",
+        "instagram_url": "https://www.instagram.com/thembaaaaaaaaaa/",
         "card_photo": "fc6980ac883e3fb979bf52741ad7188d.png",
         "title_font": _FONTS["vintage2"],
         "profile_href": "/artist-themba.html",

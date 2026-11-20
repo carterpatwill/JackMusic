@@ -23,8 +23,8 @@ ALBUM_MAX_PAGES = 4  # paginate up to 40 releases
 # Simple in-process token + response cache so we don't re-auth / re-fetch on
 # every page click.
 _token_cache = {"value": None, "expires": 0.0}
-_albums_cache = {}  # spotify_id -> (expires_ts, payload)
-_ALBUMS_TTL = 60 * 60  # 1 hour
+_ALBUMS_TTL = 24 * 3600  # releases change rarely; cached in the DB (db.cache_*)
+_blocked_until = [0.0]  # set from Retry-After when Spotify rate-limits us
 
 
 class SpotifyError(RuntimeError):
@@ -124,19 +124,35 @@ def get_albums(token, spotify_id):
 
 
 def artist_detail(spotify_id):
-    """Combined artist image + discography, cached for an hour."""
-    now = time.time()
-    cached = _albums_cache.get(spotify_id)
-    if cached and cached[0] > now:
-        return cached[1]
+    """Artist image + discography. Cached in the database for a day; if
+    Spotify fails or is rate-limiting, the last good copy is returned."""
+    from . import db
 
-    token = get_token()
-    info = get_artist_image(token, spotify_id)
-    payload = {
-        "name": info["name"],
-        "image": info["image"],
-        "url": info["url"],
-        "albums": get_albums(token, spotify_id),
-    }
-    _albums_cache[spotify_id] = (now + _ALBUMS_TTL, payload)
+    key = f"spotify:artist:{spotify_id}"
+    fresh = db.cache_get(key, max_age=_ALBUMS_TTL)
+    if fresh:
+        return fresh
+    stale = db.cache_get(key)
+    if time.time() < _blocked_until[0]:
+        if stale:
+            return stale
+        raise SpotifyError("Spotify is rate-limiting this app; try again later.")
+    try:
+        token = get_token()
+        info = get_artist_image(token, spotify_id)
+        payload = {
+            "name": info["name"],
+            "image": info["image"],
+            "url": info["url"],
+            "albums": get_albums(token, spotify_id),
+        }
+    except requests.HTTPError as e:
+        resp = e.response
+        if resp is not None and resp.status_code == 429:
+            wait = float(resp.headers.get("Retry-After") or 60)
+            _blocked_until[0] = time.time() + min(wait, 24 * 3600)
+        if stale:
+            return stale
+        raise
+    db.cache_put(key, payload)
     return payload

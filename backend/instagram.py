@@ -21,7 +21,6 @@ import requests
 GRAPH = "https://graph.facebook.com"
 TIMEOUT = 20
 _TTL = 12 * 3600  # Meta allows few calls per hour for new apps; cache generously
-_cache = {}  # username -> (expires_ts, payload)
 _blocked_until = [0.0]  # after an error (e.g. rate limit), pause calls briefly
 
 POST_FIELDS = "timestamp,like_count,comments_count,view_count,media_type,media_product_type,permalink,caption"
@@ -57,9 +56,24 @@ def _graph(path, **params):
 def profile(username, max_posts=100):
     """{'username', 'followers', 'media_count', 'posts': [...] oldest first}.
     Posts: timestamp, likes, comments, views (Reels only, else None), type, url."""
-    hit = _cache.get(username)
-    if hit and hit[0] > time.time():
-        return hit[1]
+    from . import db
+
+    key = f"instagram:profile:{username}"
+    fresh = db.cache_get(key, max_age=_TTL)
+    if fresh:
+        return fresh
+    try:
+        out = _fetch_profile(username, max_posts)
+    except InstagramError:
+        stale = db.cache_get(key)
+        if stale:
+            return stale
+        raise
+    db.cache_put(key, out)
+    return out
+
+
+def _fetch_profile(username, max_posts):
 
     ig_user = os.environ["IG_USER_ID"]
     base = "business_discovery.username({u}){{followers_count,media_count,media{after}{{{f}}}}}"
@@ -101,7 +115,6 @@ def profile(username, max_posts=100):
             "caption": caption[:90],
         })
     out["posts"].sort(key=lambda p: p["timestamp"] or "")
-    _cache[username] = (time.time() + _TTL, out)
     return out
 
 

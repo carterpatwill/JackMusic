@@ -108,6 +108,12 @@ CREATE TABLE IF NOT EXISTS snapshots (
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_artist ON snapshots(artist_id, captured_at);
 
+CREATE TABLE IF NOT EXISTS api_cache (
+    key        TEXT PRIMARY KEY,
+    payload    TEXT NOT NULL,
+    fetched_at REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS subscribers (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     email        TEXT UNIQUE NOT NULL,
@@ -384,6 +390,39 @@ def get_snapshots(artist_id):
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# --------------------------------------------------------------- API cache --
+# Responses from rate-limited APIs (Spotify, Instagram, YouTube) are kept here
+# so restarts / free-tier sleep don't trigger fresh calls, and so the last good
+# answer can still be shown while a service is rate-limiting us.
+def cache_get(key, max_age=None):
+    """Cached payload for key if younger than max_age seconds (any age if None)."""
+    import json, time
+    try:
+        conn = connect()
+        row = conn.execute("SELECT payload, fetched_at FROM api_cache WHERE key = ?", (key,)).fetchone()
+        conn.close()
+    except Exception:  # noqa: BLE001 - a cache miss is never fatal
+        return None
+    if not row or (max_age is not None and time.time() - row["fetched_at"] > max_age):
+        return None
+    return json.loads(row["payload"])
+
+
+def cache_put(key, payload):
+    import json, time
+    try:
+        conn = connect()
+        conn.execute(
+            "INSERT INTO api_cache (key, payload, fetched_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET payload = excluded.payload, fetched_at = excluded.fetched_at",
+            (key, json.dumps(payload), time.time()),
+        )
+        conn.commit()
+        conn.close()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 if __name__ == "__main__":

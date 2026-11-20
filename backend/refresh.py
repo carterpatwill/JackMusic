@@ -126,7 +126,6 @@ def refresh_week(week_of=None):
     week_of = week_of or db.latest_week()
     yt_key = os.environ.get("YOUTUBE_API_KEY")
 
-    token = _spotify_token()
     now = datetime.now(timezone.utc).isoformat()
 
     conn = db.connect()
@@ -139,14 +138,9 @@ def refresh_week(week_of=None):
     for ar in rows:
         entry = {"slug": ar["slug"], "name": ar["name"], "errors": []}
 
-        # --- Spotify ---
+        # Spotify: this app's access tier returns no follower/popularity numbers
+        # (see DATA_SOURCES.md), so we don't spend rate-limited calls on it.
         followers = popularity = None
-        if ar["spotify_id"]:
-            try:
-                sp = _spotify_artist(token, ar["spotify_id"])
-                followers, popularity = sp["followers"], sp["popularity"]
-            except Exception as e:  # noqa: BLE001 - surface per-artist, keep going
-                entry["errors"].append(f"spotify: {e}")
 
         # --- YouTube (resolve channel id once, then cache it) ---
         subs = views = None

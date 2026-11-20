@@ -24,6 +24,8 @@
     ".xd-platform{display:inline-flex;align-items:center;gap:8px;font:800 15px 'Archivo',sans-serif;color:#5B6246;background:transparent;border:0;border-radius:999px;padding:10px 18px;cursor:pointer;white-space:nowrap}",
     ".xd-platform i{width:9px;height:9px;border-radius:50%;display:inline-block}",
     ".xd-platform[aria-selected=true]{background:#2F5D3A;color:#FFFBF1;box-shadow:0 1px 3px rgba(0,0,0,.15)}",
+    ".xd-select{display:inline-flex;align-items:center;gap:10px;font:700 13px 'Archivo',sans-serif;color:#5B6246}",
+    ".xd-select select{font:700 14px 'Archivo',sans-serif;color:#2F5D3A;background:#F5EFDC;border:1px solid rgba(44,52,32,.2);border-radius:999px;padding:8px 32px 8px 14px;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%232F5D3A'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 13px center}",
     ".xd-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}",
     ".xd-tab{font:700 13px 'Archivo',sans-serif;color:#2F5D3A;background:transparent;border:1px solid rgba(44,52,32,.2);border-radius:999px;padding:6px 12px;cursor:pointer}",
     ".xd-tab[aria-selected=true]{background:#2F5D3A;color:#FFFBF1;border-color:#2F5D3A}",
@@ -112,9 +114,14 @@
       id: "instagram", label: "Instagram", dot: "#D6249F",
       stats: [[fmt(ig.followers), "Followers"]]
         .concat(posts.length ? [[fmt(posts.length), "Recent posts"], [fmt(reelViews), "Reel views"]] : []),
-      tabs: (hasIG ? [{ id: "instagram", label: "Posts" }] : [])
-        .concat([{ id: "iggrowth", label: "Follower growth" }]),
-      note: "Live from Instagram. Likes, comments and Reel views are as of today for each recent post. \u201cFollower growth\u201d comes from Quigley Discovery's own weekly snapshots.",
+      select: true,
+      tabs: (hasIG ? [
+        { id: "igmonthly", label: "Views by month" },
+        { id: "igtop", label: "Top 5 posts" },
+        { id: "igengage", label: "Likes & comments by month" },
+        { id: "instagram", label: "Every post (detailed)" },
+      ] : []).concat([{ id: "iggrowth", label: "Follower growth" }]),
+      note: "Live from Instagram. Views, likes and comments are as of today for the artist's recent posts. \u201cFollower growth\u201d comes from Quigley Discovery's own weekly snapshots.",
     });
     if (releases.length) platforms.push({
       id: "spotify", label: "Spotify", dot: "#1DB954",
@@ -254,6 +261,138 @@
       });
     }
 
+    // Instagram, simplified: posts grouped by the month they went up.
+    // We fetch the most recent ~100 posts, so when that cap is hit the oldest
+    // month may be incomplete; it's dropped rather than shown as a fake dip.
+    function igByMonth() {
+      var groups = {}, order = [];
+      posts.forEach(function (p) {
+        var d0 = new Date(p.timestamp);
+        var key = d0.getUTCFullYear() + "-" + String(d0.getUTCMonth() + 1).padStart(2, "0");
+        if (!groups[key]) { groups[key] = []; order.push(key); }
+        groups[key].push(p);
+      });
+      order.sort();
+      if (posts.length >= 100 && order.length > 1) order.shift();
+      // Include months with no posts (as zero) so the timeline isn't squished.
+      if (order.length) {
+        var full = [], y = +order[0].slice(0, 4), mo = +order[0].slice(5, 7);
+        var endY = +order[order.length - 1].slice(0, 4), endM = +order[order.length - 1].slice(5, 7);
+        while (y < endY || (y === endY && mo <= endM)) {
+          full.push(y + "-" + String(mo).padStart(2, "0"));
+          mo++; if (mo > 12) { mo = 1; y++; }
+        }
+        order = full;
+      }
+      return order.map(function (k) {
+        var list = groups[k] || [], v = 0, l = 0, c = 0, best = null;
+        list.forEach(function (p) {
+          v += p.views || 0; l += p.likes || 0; c += p.comments || 0;
+          var score = p.views != null ? p.views : (p.likes || 0);
+          if (!best || score > (best.views != null ? best.views : (best.likes || 0))) best = p;
+        });
+        var p0 = k.split("-");
+        return { label: month(new Date(Date.UTC(+p0[0], +p0[1] - 1, 1))).replace(" 20", " \u2019"), posts: list.length,
+          views: v, likes: l, comments: c, avgLikes: list.length ? Math.round(l / list.length) : null,
+          avgComments: list.length ? Math.round(c / list.length) : null, best: best };
+      });
+    }
+    function bestLine(m) {
+      var b = m.best;
+      return b ? "Best post: " + (b.caption || (b.type === "reel" ? "Reel" : "Post")).slice(0, 48) +
+        (b.views != null ? " (" + short(b.views) + " views)" : " (" + short(b.likes) + " likes)") : "";
+    }
+
+    function igMonthly() {
+      var months = igByMonth();
+      var useViews = months.some(function (m) { return m.views > 0; });
+      desc.textContent = useViews
+        ? "Total views on the posts from each month, the quickest way to see when " + d.name + "'s Instagram took off. Hover a month for its best post."
+        : "Total likes on the posts from each month. Hover a month for its best post.";
+      draw({
+        type: "bar",
+        data: { labels: months.map(function (m) { return m.label; }), datasets: [{
+          label: useViews ? "Views" : "Likes", data: months.map(function (m) { return useViews ? m.views : m.likes; }),
+          backgroundColor: "#E7A3CF", hoverBackgroundColor: "#D6249F", borderRadius: 6, maxBarThickness: 56 }] },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: Object.assign({}, tooltip, { callbacks: {
+              title: function (items) { return months[items[0].dataIndex].label; },
+              label: function (it) {
+                var m = months[it.dataIndex];
+                return m.posts ? [it.dataset.label + ": " + fmt(it.raw), m.posts + (m.posts === 1 ? " post" : " posts"), bestLine(m)] : ["No posts this month"];
+              },
+            } }),
+          },
+          scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+            y: axis({ beginAtZero: true }) },
+        },
+      });
+    }
+
+    function igTop() {
+      var hasViews = posts.some(function (p) { return p.views != null; });
+      var key = hasViews ? "views" : "likes";
+      var top = posts.slice().sort(function (a, b) { return (b[key] || 0) - (a[key] || 0); }).slice(0, 5);
+      desc.textContent = "The five most-" + (hasViews ? "viewed" : "liked") + " recent posts. Click a bar to open the post.";
+      draw({
+        type: "bar",
+        data: { labels: top.map(function (p) {
+          var t = p.caption || (p.type === "reel" ? "Reel" : "Post");
+          return (t.length > 28 ? t.slice(0, 27) + "\u2026" : t) + " \u00b7 " + month(new Date(p.timestamp)).replace(" 20", " \u2019");
+        }), datasets: [{ label: hasViews ? "Views" : "Likes", data: top.map(function (p) { return p[key] || 0; }),
+          backgroundColor: "#E7A3CF", hoverBackgroundColor: "#D6249F", borderRadius: 6, maxBarThickness: 40 }] },
+        options: {
+          indexAxis: "y", maintainAspectRatio: false,
+          onClick: function (e, els) { if (els.length && top[els[0].index].url) window.open(top[els[0].index].url, "_blank", "noopener"); },
+          onHover: function (e, els) { e.native.target.style.cursor = els.length ? "pointer" : "default"; },
+          plugins: {
+            legend: { display: false },
+            tooltip: Object.assign({}, tooltip, { callbacks: {
+              title: function (items) { return top[items[0].dataIndex].caption || "Post"; },
+              label: function (it) {
+                var p = top[it.dataIndex], out = [day(new Date(p.timestamp))];
+                if (p.views != null) out.push("Views: " + fmt(p.views));
+                if (p.likes != null) out.push("Likes: " + fmt(p.likes));
+                if (p.comments != null) out.push("Comments: " + fmt(p.comments));
+                return out;
+              },
+            } }),
+          },
+          scales: { x: axis({ beginAtZero: true }), y: { grid: { display: false }, ticks: { color: C.ink } } },
+        },
+      });
+    }
+
+    function igEngage() {
+      var months = igByMonth();
+      desc.textContent = "The average likes and comments per post for each month: how engaged the audience is, not just how big it is.";
+      draw({
+        type: "line",
+        data: { labels: months.map(function (m) { return m.label; }), datasets: [
+          { label: "Avg likes per post", data: months.map(function (m) { return m.avgLikes; }), yAxisID: "likes",
+            borderColor: "#B4237F", backgroundColor: "#B4237F", borderWidth: 2.5, pointRadius: 3.5, tension: 0.25 },
+          { label: "Avg comments per post", data: months.map(function (m) { return m.avgComments; }), yAxisID: "comments",
+            borderColor: C.gold, backgroundColor: C.gold, borderWidth: 2.5, pointRadius: 3.5, tension: 0.25 },
+        ].map(function (ds) { ds.spanGaps = true; return ds; }) },
+        options: {
+          maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8 } },
+            tooltip: Object.assign({}, tooltip, { callbacks: {
+              label: function (it) { return it.raw == null ? null : it.dataset.label + ": " + fmt(it.raw); },
+              afterBody: function (items) { var m = months[items[0].dataIndex]; return m.posts ? m.posts + (m.posts === 1 ? " post" : " posts") : "No posts this month"; },
+            } }),
+          },
+          scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+            likes: axis({ position: "left", beginAtZero: true, title: { display: true, text: "Likes" } }),
+            comments: axis({ position: "right", beginAtZero: true, grid: { display: false }, title: { display: true, text: "Comments" } }) },
+        },
+      });
+    }
+
     // Instagram: every recent post. Bars = likes; dots = Reel views.
     function instagramPosts() {
       var hasViews = posts.some(function (p) { return p.views != null; });
@@ -351,7 +490,8 @@
         "Follower tracking starts with the next stats refresh. A new point is added each time, and the line grows week by week.");
     }
 
-    var views = { release: byRelease, releases: releaseTimeline, instagram: instagramPosts, ytgrowth: ytGrowth, iggrowth: igGrowth };
+    var views = { release: byRelease, releases: releaseTimeline, instagram: instagramPosts, ytgrowth: ytGrowth, iggrowth: igGrowth,
+      igmonthly: igMonthly, igtop: igTop, igengage: igEngage };
     var statsEl = root.querySelector(".xd-stats");
     var tabsEl = root.querySelector(".xd-tabs");
 
@@ -361,11 +501,21 @@
       statsEl.innerHTML = pf.stats.map(function (st) {
         return '<div class="xd-stat"><b>' + esc(st[0]) + "</b><span>" + esc(st[1]) + "</span></div>";
       }).join("");
+      note.textContent = pf.note;
+      if (pf.select) {
+        tabsEl.innerHTML = '<label class="xd-select"><span>Show</span><select>' + pf.tabs.map(function (t) {
+          return '<option value="' + t.id + '">' + esc(t.label) + "</option>";
+        }).join("") + "</select></label>";
+        tabsEl.style.display = pf.tabs.length > 1 ? "" : "none";
+        var sel = tabsEl.querySelector("select");
+        sel.addEventListener("change", function () { views[sel.value](); });
+        views[pf.tabs[0].id]();
+        return;
+      }
       tabsEl.innerHTML = pf.tabs.map(function (t, i) {
         return '<button type="button" class="xd-tab" role="tab" data-tab="' + t.id + '" aria-selected="' + (i === 0) + '">' + esc(t.label) + "</button>";
       }).join("");
       tabsEl.style.display = pf.tabs.length > 1 ? "" : "none";
-      note.textContent = pf.note;
       var tabEls = tabsEl.querySelectorAll(".xd-tab");
       tabEls.forEach(function (btn) {
         btn.addEventListener("click", function () {

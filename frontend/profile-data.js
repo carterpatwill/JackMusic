@@ -116,8 +116,8 @@
         .concat(posts.length ? [[fmt(posts.length), "Recent posts"], [fmt(reelViews), "Reel views"]] : []),
       select: true,
       tabs: (hasIG ? [
-        { id: "igmonthly", label: "Views by month" },
         { id: "igtop", label: "Top 5 posts" },
+        { id: "igmonthly", label: "Views by month" },
         { id: "igengage", label: "Likes & comments by month" },
         { id: "instagram", label: "Every post (detailed)" },
       ] : []).concat([{ id: "iggrowth", label: "Follower growth" }]),
@@ -209,7 +209,7 @@
         },
         options: {
           maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
-          onClick: function (e, els) {
+          onClick: function (e, els, ch) {
             if (els.length) window.open("https://youtu.be/" + videos[els[0].index].id, "_blank", "noopener");
           },
           onHover: function (e, els) { e.native.target.style.cursor = els.length ? "pointer" : "default"; },
@@ -332,22 +332,28 @@
       });
     }
 
+    // Row under the pointer in a horizontal bar chart (its label or its bar), or null.
+    function rowAt(ch, e) {
+      var y = ch.scales.y;
+      if (!y || e.x < y.left || e.x > ch.chartArea.right || e.y < y.top || e.y > y.bottom) return null;
+      var i = Math.round(y.getValueForPixel(e.y));
+      return i >= 0 && i < ch.data.labels.length ? i : null;
+    }
     function igTop() {
       var hasViews = posts.some(function (p) { return p.views != null; });
       var key = hasViews ? "views" : "likes";
       var top = posts.slice().sort(function (a, b) { return (b[key] || 0) - (a[key] || 0); }).slice(0, 5);
-      desc.textContent = "The five most-" + (hasViews ? "viewed" : "liked") + " recent posts. Click a bar to open the post.";
+      desc.textContent = "The five most-" + (hasViews ? "viewed" : "liked") + " recent posts. Click a bar or a post's name to open it on Instagram.";
       draw({
         type: "bar",
         data: { labels: top.map(function (p) {
           var t = p.caption || (p.type === "reel" ? "Reel" : "Post");
-          return (t.length > 28 ? t.slice(0, 27) + "\u2026" : t) + " \u00b7 " + month(new Date(p.timestamp)).replace(" 20", " \u2019");
+          return (t.length > 28 ? t.slice(0, 27) + "\u2026" : t) + " \u00b7 " + month(new Date(p.timestamp)).replace(" 20", " \u2019") + " \u2197";
         }), datasets: [{ label: hasViews ? "Views" : "Likes", data: top.map(function (p) { return p[key] || 0; }),
           backgroundColor: "#E7A3CF", hoverBackgroundColor: "#D6249F", borderRadius: 6, maxBarThickness: 40 }] },
         options: {
           indexAxis: "y", maintainAspectRatio: false,
-          onClick: function (e, els) { if (els.length && top[els[0].index].url) window.open(top[els[0].index].url, "_blank", "noopener"); },
-          onHover: function (e, els) { e.native.target.style.cursor = els.length ? "pointer" : "default"; },
+
           plugins: {
             legend: { display: false },
             tooltip: Object.assign({}, tooltip, { callbacks: {
@@ -361,8 +367,19 @@
               },
             } }),
           },
-          scales: { x: axis({ beginAtZero: true }), y: { grid: { display: false }, ticks: { color: C.ink } } },
+          scales: { x: axis({ beginAtZero: true }), y: { grid: { display: false }, ticks: { color: "#B0187F", font: { weight: "600" } } } },
         },
+      });
+      // Click a bar, or the post's name beside it, to open the post. (Chart.js
+      // only reports clicks inside the plot, so listen on the canvas directly.)
+      var ch = chart, canvas = ch.canvas;
+      function postAt(ev) { return rowAt(ch, { x: ev.offsetX, y: ev.offsetY }); }
+      canvas.addEventListener("click", function (ev) {
+        var i = postAt(ev);
+        if (i != null && top[i].url) window.open(top[i].url, "_blank", "noopener");
+      });
+      canvas.addEventListener("mousemove", function (ev) {
+        canvas.style.cursor = postAt(ev) != null ? "pointer" : "default";
       });
     }
 

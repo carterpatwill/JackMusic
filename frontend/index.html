@@ -26,42 +26,46 @@
 <body>
 <div id="top" style="position: relative; overflow-x: clip;">
 
-  <div class="blob b1"></div>
-  <div class="blob b2"></div>
-  <div class="blob b3"></div>
-  <div class="blob b4"></div>
-
-  <!-- Nav -->
-  <div class="nav">
-    <div class="wrap nav-inner">
-      <a href="#top" class="brand"><span class="light">Quigley</span>&nbsp;<span class="accent">Discovery</span></a>
-      <div class="nav-links">
-        <a href="#picks">Artist Picks</a>
-        <a href="#approach">Approach</a>
-        <a href="#about">About</a>
-        <a href="#contact">Contact</a>
+  <!-- Full-screen hero, pinned behind the page -->
+  <header class="hero">
+    <div class="hero-bg">
+      <img src="/assets/4f12d7bf223e102db5eb1f722bebd02e.jpg" alt="">
+      <div class="overlay"></div>
+    </div>
+    <div class="hero-inner">
+      <div id="jackpot">
+        <h1>Quigley Discovery</h1>
+        <p class="invest-q">Today's independents, tomorrow's superstars.</p>
       </div>
     </div>
-  </div>
+  </header>
+
+  <!-- The rest of the site scrolls up over the hero -->
+  <div class="over">
+    <div class="over-spacer" aria-hidden="true"></div>
+    <div class="over-content">
+      <div class="over-bg" aria-hidden="true"></div>
+
+      <div class="blob b1"></div>
+      <div class="blob b2"></div>
+      <div class="blob b3"></div>
+      <div class="blob b4"></div>
+
+      <!-- Nav -->
+      <div class="nav">
+        <div class="wrap nav-inner">
+          <a href="#top" class="brand"><span class="light">Quigley</span>&nbsp;<span class="accent">Discovery</span></a>
+          <div class="nav-links">
+            <a href="#picks">Artist Picks</a>
+            <a href="#approach">Approach</a>
+            <a href="#about">About</a>
+            <a href="#contact">Contact</a>
+          </div>
+        </div>
+      </div>
 
   <!-- Artists -->
   <div id="artists" class="wrap section">
-    <div class="hero">
-      <div class="hero-bg">
-        <img src="/assets/4f12d7bf223e102db5eb1f722bebd02e.jpg" alt="">
-        <div class="overlay"></div>
-      </div>
-      <div class="hero-inner">
-        <div id="jackpot">
-          <h1>Quigley Discovery</h1>
-          <p class="invest-q">Today's independents, tomorrow's superstars.</p>
-          <p class="lede">Every week, I drop a new batch of 5 independent artists worth investing in. You decide how to invest. Will you download their music to your library, follow them on socials, share them with a friend, buy their merch, or go see them live in concert?</p>
-        </div>
-        <p class="eyebrow" style="margin:0;">Independent A&amp;R · Los Angeles</p>
-      </div>
-    </div>
-
-    <p class="invest-callout">Here's who I'm investing in this week. <span>How will you invest?</span></p>
 
     <div id="picks" class="week-head" style="margin-top: 8px;">
       <h2 class="heading" style="margin:0;">This Week's Artists</h2>
@@ -70,7 +74,6 @@
         <p id="refresh-note" class="refresh-note"></p>
       </div>
     </div>
-    <p class="subcopy">Five independent artists I think are worth your time right now, starting with this week's top pick.</p>
     <p id="week-date" class="week-date"></p>
 
     <div id="featured"></div>
@@ -169,6 +172,9 @@
     <span>Quigley Discovery · A&amp;R &amp; artist management · Los Angeles</span>
     <span>© 2026</span>
   </div>
+
+    </div><!-- /.over-content -->
+  </div><!-- /.over -->
 
 </div>
 <script src="/app.js"></script>

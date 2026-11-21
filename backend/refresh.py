@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 import requests
 
-from . import db, instagram
+from . import db, instagram, usage
 
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 SPOTIFY_ARTIST_URL = "https://api.spotify.com/v1/artists/{id}"
@@ -123,6 +123,8 @@ def _yt_channel_stats(api_key, channel_id):
 def refresh_week(week_of=None):
     """Fetch stats for every artist in the week and insert a snapshot row each.
     Returns a per-artist summary dict for the API response."""
+    if not usage.live_apis():
+        raise RefreshError("Live API calls are off on this machine (set LIVE_APIS=1 to take a snapshot).")
     week_of = week_of or db.latest_week()
     yt_key = os.environ.get("YOUTUBE_API_KEY")
 

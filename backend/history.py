@@ -18,7 +18,7 @@ import time
 
 import requests
 
-from . import db, instagram, refresh, spotify
+from . import db, instagram, refresh, spotify, usage
 
 YT = "https://www.googleapis.com/youtube/v3"
 TIMEOUT = 15
@@ -31,6 +31,7 @@ class HistoryError(RuntimeError):
 
 
 def _get(path, **params):
+    usage.require_live("YouTube")
     params["key"] = os.environ["YOUTUBE_API_KEY"]
     r = requests.get(f"{YT}/{path}", params=params, timeout=TIMEOUT)
     r.raise_for_status()
@@ -115,6 +116,7 @@ def _channel_id(artist):
     """Cached channel id, or resolve it from the artist's video URL once."""
     if artist["youtube_channel_id"]:
         return artist["youtube_channel_id"]
+    usage.require_live("YouTube")
     cid = refresh.channel_id_from_url(os.environ["YOUTUBE_API_KEY"], artist["youtube_url"])
     if cid:
         db.set_channel_id(artist["id"], cid)

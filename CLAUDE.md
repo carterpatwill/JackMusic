@@ -55,8 +55,11 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
   weeks). `python -m backend.db --publish` runs the same sync locally. Artist slugs are UNIQUE
   across all weeks, so each week's artists need new slugs.
 - `backend/db.py` — schema, seed sync, trend query, subscribers. No ORM.
-  Uses Postgres when `DATABASE_URL` is set (production: free Neon, so history
-  survives Render redeploys), else the local `data.db` SQLite file. Queries are
+  Uses Postgres (`DATABASE_URL`, free Neon, so history survives Render
+  redeploys) only on the host (`RENDER` set) or with `USE_LIVE_DB=1`; locally it
+  is always the `data.db` SQLite file, so drafts can't reach the live DB.
+  `python -m backend.db --pull-live` copies the live artists, snapshots and
+  saved API responses down (read-only, no API calls). Queries are
   written SQLite-style (`?`, `:name`); `_PgConn` translates them. Keep new SQL
   portable to both (e.g. `ON CONFLICT`, not `INSERT OR IGNORE`).
 - `backend/history.py` + `frontend/profile-data.js` — profile "Explore the
@@ -97,11 +100,30 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
 ```bash
 pip install -r requirements.txt
 cp .env.example .env            # add Spotify/YouTube keys
-uvicorn backend.app:app --reload
-python -m backend.refresh       # take a snapshot from the CLI
+uvicorn backend.app:app --reload  # local: SQLite + saved data only
+python -m backend.db --pull-live  # copy the live site's saved data down
+LIVE_APIS=1 python -m backend.refresh  # take a snapshot (spends quota)
 python -m backend.db --publish  # add seed.py's week, keep earlier weeks (archive)
 python -m backend.db --reseed   # wipe ALL weeks + stats, reseed current week only
 ```
+
+## Protecting the free API allowances (read before touching any fetch code)
+
+Local work and the live site share the same Spotify / YouTube / Instagram
+keys, so local calls spend the live site's allowance. Spotify has already
+blocked the app for ~20h after repeated local restarts. `backend/usage.py`
+enforces:
+
+- **Live calls only on the host** (`RENDER`) or with `LIVE_APIS=1`. Otherwise
+  every fetch serves the saved copy in `api_cache` or raises `OfflineError`;
+  stats refresh and startup refresh are off. Drafts of a new week therefore
+  show no live data for new artists, by design.
+- **Rate-limit blocks are saved in the DB** (`blocked:spotify`,
+  `blocked:instagram`), so restarts wait them out instead of retrying.
+- Saved copies: Spotify 24h, Instagram 12h, YouTube 6h. A stats refresh
+  reuses the saved Instagram follower count. Spotify skips compilations.
+- When researching new artists, look IDs up once (prefer the artist's public
+  pages/Linktree over API calls) and stop at the first 429.
 
 ## Known caveats / future work
 

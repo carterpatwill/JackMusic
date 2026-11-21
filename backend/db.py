@@ -2,10 +2,14 @@
 week-over-week trend from stored snapshots.
 
 Two backends, same code:
-- DATABASE_URL set (e.g. a free Neon Postgres): used in production so the
-  stats history survives redeploys (Render's free disk is wiped on each one).
-- Otherwise a local SQLite file (data.db at the project root), created on
-  first use. Handy for development; disposable.
+- On the host (Render sets RENDER), DATABASE_URL (a free Neon Postgres) is
+  used so the stats history survives redeploys (Render's free disk is wiped
+  on each one).
+- Locally, a SQLite file (data.db at the project root), even if .env has
+  DATABASE_URL: local work and drafts must never write to the live database
+  (or spend its free compute). Opt in with USE_LIVE_DB=1. To get the live
+  site's saved data locally without any API calls:
+      python -m backend.db --pull-live
 
 Queries are written once in SQLite style (`?` and `:name` placeholders);
 _PgConn translates them for Postgres. No ORM.
@@ -21,8 +25,14 @@ from . import seed
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data.db")
 
 
-def _database_url():
+def _live_database_url():
     return os.environ.get("DATABASE_URL", "").strip()
+
+
+def _database_url():
+    if os.environ.get("RENDER") or os.environ.get("USE_LIVE_DB", "").strip() == "1":
+        return _live_database_url()
+    return ""
 
 
 def using_postgres():
@@ -67,6 +77,10 @@ class _PgConn:
 def connect():
     if using_postgres():
         return _PgConn(_database_url())
+    return _sqlite()
+
+
+def _sqlite():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
@@ -425,8 +439,74 @@ def cache_put(key, payload):
         pass
 
 
+def pull_live():
+    """Copy the live database's artists, snapshots and saved API responses
+    into the local SQLite file (read-only on the live side). Lets local work
+    and drafts show real data without calling Spotify/YouTube/Instagram.
+    Then re-applies seed.py, so a draft week stays on top."""
+    url = _live_database_url()
+    if not url.startswith(("postgres://", "postgresql://")):
+        raise SystemExit("No DATABASE_URL in .env to pull from.")
+    live = _PgConn(url)
+    artists = live.execute("SELECT * FROM artists").fetchall()
+    snaps = live.execute(
+        "SELECT a.slug, s.captured_at, s.spotify_followers, s.spotify_popularity, "
+        "s.youtube_subs, s.youtube_views, s.instagram_followers "
+        "FROM snapshots s JOIN artists a ON a.id = s.artist_id"
+    ).fetchall()
+    cache = live.execute("SELECT key, payload, fetched_at FROM api_cache").fetchall()
+    live.close()
+
+    local = _sqlite()
+    local.executescript(SCHEMA)
+    _migrate(local)
+    fields = _ARTIST_FIELDS + ("youtube_channel_id",)
+    cols = ", ".join(fields)
+    vals = ", ".join(f":{f}" for f in fields)
+    updates = ", ".join(f"{f} = excluded.{f}" for f in fields if f != "slug")
+    for a in artists:
+        local.execute(
+            f"INSERT INTO artists ({cols}) VALUES ({vals}) ON CONFLICT(slug) DO UPDATE SET {updates}",
+            {f: a.get(f) for f in fields},
+        )
+    ids = {r["slug"]: r["id"] for r in local.execute("SELECT id, slug FROM artists").fetchall()}
+    pulled = {s["slug"] for s in snaps}
+    for slug in pulled:  # replace, so pulling twice doesn't duplicate points
+        local.execute("DELETE FROM snapshots WHERE artist_id = ?", (ids[slug],))
+    for s in snaps:
+        local.execute(
+            "INSERT INTO snapshots (artist_id, captured_at, spotify_followers, spotify_popularity, "
+            "youtube_subs, youtube_views, instagram_followers) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (ids[s["slug"]], s["captured_at"], s["spotify_followers"], s["spotify_popularity"],
+             s["youtube_subs"], s["youtube_views"], s["instagram_followers"]),
+        )
+    for c in cache:
+        local.execute(
+            "INSERT INTO api_cache (key, payload, fetched_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET payload = excluded.payload, fetched_at = excluded.fetched_at",
+            (c["key"], c["payload"], c["fetched_at"]),
+        )
+    local.commit()
+    sync_seed(local)
+    local.close()
+    return len(artists), len(snaps), len(cache)
+
+
 if __name__ == "__main__":
     import sys
+
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+    except ImportError:
+        pass
+
+    if "--pull-live" in sys.argv:
+        n_a, n_s, n_c = pull_live()
+        print(f"Copied {n_a} artists, {n_s} snapshots and {n_c} saved API responses "
+              f"from the live database into {DB_PATH}.")
+        sys.exit(0)
 
     if "--publish" in sys.argv:
         week, added = publish_week()

@@ -64,8 +64,15 @@ On start the server fetches fresh stats if the newest snapshot is older than
 **Database:** with `DATABASE_URL` set (a free [Neon](https://neon.tech)
 Postgres), stats history, artists and subscribers persist across deploys,
 which the week-over-week trend and the profile "Explore the Data" charts rely
-on. Without it the server uses the local `data.db` SQLite file, which
-Render's free disk wipes on every deploy.
+on. It's used only on Render: running locally always uses the `data.db`
+SQLite file (unless `USE_LIVE_DB=1`), so local work and drafts never touch
+the live data. `python -m backend.db --pull-live` copies the live site's
+artists, stats and saved API data down without calling any API.
+
+**Free API allowances:** locally the site makes no Spotify / YouTube /
+Instagram calls unless `LIVE_APIS=1` is set; it shows saved data instead.
+Those keys are shared with the live site, so local calls use up its free
+allowance. See CLAUDE.md "Protecting the free API allowances".
 
 ## Instagram data
 

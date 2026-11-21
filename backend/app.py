@@ -60,6 +60,12 @@ STALE_AFTER_HOURS = float(os.environ.get("STALE_AFTER_HOURS", "12"))
 def _refresh_if_stale():
     from datetime import datetime, timedelta, timezone
 
+    from . import usage
+
+    if not usage.live_apis():
+        print("Live API calls off on this machine: serving saved data only.")
+        return
+
     try:
         conn = db.connect()
         row = conn.execute(

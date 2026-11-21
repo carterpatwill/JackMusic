@@ -18,10 +18,11 @@ import time
 
 import requests
 
+from . import usage
+
 GRAPH = "https://graph.facebook.com"
 TIMEOUT = 20
 _TTL = 12 * 3600  # Meta allows few calls per hour for new apps; cache generously
-_blocked_until = [0.0]  # after an error (e.g. rate limit), pause calls briefly
 
 POST_FIELDS = "timestamp,like_count,comments_count,view_count,media_type,media_product_type,permalink,caption"
 
@@ -40,15 +41,16 @@ def username_from_url(url):
 
 
 def _graph(path, **params):
-    if time.time() < _blocked_until[0]:
-        raise InstagramError("Paused after a recent Instagram API error; retrying shortly.")
+    usage.require_live("Instagram")
+    if usage.is_blocked("instagram"):
+        raise InstagramError("Paused after an Instagram rate limit; retrying shortly.")
     params["access_token"] = os.environ["IG_ACCESS_TOKEN"]
     r = requests.get(f"{GRAPH}/{path}", params=params, timeout=TIMEOUT)
     data = r.json() if r.content else {}
     if r.status_code >= 400 or "error" in data:
         err = data.get("error") or {}
         if err.get("code") in (4, 17, 32, 613):  # rate limits: back off 15 min
-            _blocked_until[0] = time.time() + 15 * 60
+            usage.block("instagram", 15 * 60)  # saved in the DB: restarts wait too
         raise InstagramError(err.get("message") or f"HTTP {r.status_code}")
     return data
 
@@ -64,7 +66,7 @@ def profile(username, max_posts=100):
         return fresh
     try:
         out = _fetch_profile(username, max_posts)
-    except InstagramError:
+    except (InstagramError, usage.OfflineError):
         stale = db.cache_get(key)
         if stale:
             return stale
@@ -119,7 +121,13 @@ def _fetch_profile(username, max_posts):
 
 
 def followers(username):
-    """Just the follower count (used for weekly snapshots)."""
+    """Just the follower count (used for stats snapshots). Reuses the count
+    from a recently saved profile instead of making another call."""
+    from . import db
+
+    cached = db.cache_get(f"instagram:profile:{username}", max_age=_TTL)
+    if cached and cached.get("followers") is not None:
+        return cached["followers"]
     ig_user = os.environ["IG_USER_ID"]
     data = _graph(ig_user, fields=f"business_discovery.username({username}){{followers_count}}")
     return data["business_discovery"].get("followers_count")

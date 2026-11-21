@@ -13,6 +13,8 @@ import time
 
 import requests
 
+from . import usage
+
 TOKEN_URL = "https://accounts.spotify.com/api/token"
 ARTIST_URL = "https://api.spotify.com/v1/artists/{id}"
 ALBUMS_URL = "https://api.spotify.com/v1/artists/{id}/albums"
@@ -24,7 +26,6 @@ ALBUM_MAX_PAGES = 4  # paginate up to 40 releases
 # every page click.
 _token_cache = {"value": None, "expires": 0.0}
 _ALBUMS_TTL = 24 * 3600  # releases change rarely; cached in the DB (db.cache_*)
-_blocked_until = [0.0]  # set from Retry-After when Spotify rate-limits us
 
 
 class SpotifyError(RuntimeError):
@@ -88,7 +89,7 @@ def get_albums(token, spotify_id):
             params={
                 "limit": ALBUM_LIMIT,
                 "offset": page * ALBUM_LIMIT,
-                "include_groups": "album,single,compilation",
+                "include_groups": "album,single",  # compilations cost extra pages
             },
             headers=headers,
             timeout=TIMEOUT,
@@ -133,9 +134,10 @@ def artist_detail(spotify_id):
     if fresh:
         return fresh
     stale = db.cache_get(key)
-    if time.time() < _blocked_until[0]:
+    if not usage.live_apis() or usage.is_blocked("spotify"):
         if stale:
             return stale
+        usage.require_live("Spotify")
         raise SpotifyError("Spotify is rate-limiting this app; try again later.")
     try:
         token = get_token()
@@ -149,8 +151,9 @@ def artist_detail(spotify_id):
     except requests.HTTPError as e:
         resp = e.response
         if resp is not None and resp.status_code == 429:
+            # Saved in the database so restarts wait it out too.
             wait = float(resp.headers.get("Retry-After") or 60)
-            _blocked_until[0] = time.time() + min(wait, 24 * 3600)
+            usage.block("spotify", min(wait, 24 * 3600))
         if stale:
             return stale
         raise

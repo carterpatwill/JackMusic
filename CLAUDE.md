@@ -67,6 +67,9 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
   (publish date + current views; Topic channels fall back to search), Spotify
   release dates, and stored snapshots. YouTube gives no past view counts, so
   only the snapshot line is true growth over time.
+- `frontend/profile-blurb.js` — shows the artist's homepage blurb (seed.py
+  `bio`, via `GET /api/artist/{slug}`) under "If you like" on each full
+  profile. New profile pages need the `data-artist-blurb` slot + this script.
 - `backend/refresh.py` — the ONLY place API keys are used. Spotify Client
   Credentials flow; YouTube resolves a channel id from the artist's video URL
   once and caches it on the artist row.
@@ -79,8 +82,8 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
   static mounts so it takes precedence.
 - `frontend/app.js` — renders featured card + grid; handles refresh + signup.
 - `frontend/archive.html` — "See Previous Weeks": every published week from
-  `/api/weeks` + `/api/artists?week=`, with week stepper, genre filter and
-  "Surprise me".
+  `/api/weeks` + `/api/artists?week=`, as a plain text list (newest week
+  first, no photos) with a "Sound" genre dropdown.
 - `frontend/styles.css` — design tokens in `:root`; `--accent` drives theme.
 
 ## Conventions

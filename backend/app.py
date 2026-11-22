@@ -120,6 +120,16 @@ def api_weeks():
     return {"weeks": db.get_weeks()}
 
 
+@app.get("/api/artist/{slug}")
+def api_artist(slug: str):
+    """The artist's homepage blurb, so profile pages show the same text
+    (edited in seed.py) without copying it into each page."""
+    a = db.get_artist(slug)
+    if not a:
+        raise HTTPException(status_code=404, detail="Unknown artist.")
+    return {"slug": a["slug"], "name": a["name"], "bio": a.get("bio") or ""}
+
+
 @app.get("/api/artist/{slug}/spotify")
 def api_artist_spotify(slug: str):
     """Artist image + discography (album/single list with art + release dates)

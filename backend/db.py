@@ -262,9 +262,12 @@ def _latest_and_week_ago(conn, artist_id):
     if not latest:
         return None, None
     cutoff = (datetime.fromisoformat(latest["captured_at"]) - TREND_MIN_GAP).isoformat()
+    # The headline trend is YouTube views, so compare against an older
+    # snapshot that has them (skips Instagram-only rows and failed fetches).
+    need_yt = "AND youtube_views IS NOT NULL " if latest["youtube_views"] is not None else ""
     previous = conn.execute(
         "SELECT * FROM snapshots WHERE artist_id = ? AND captured_at <= ? "
-        "ORDER BY captured_at DESC LIMIT 1",
+        + need_yt + "ORDER BY captured_at DESC LIMIT 1",
         (artist_id, cutoff),
     ).fetchone()
     return latest, previous

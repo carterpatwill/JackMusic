@@ -133,10 +133,12 @@ function featuredCard(a) {
   const hint = REELS[a.slug] ? "Press play on the reel" : "Press play to hear them";
   return `
     <div class="feat">
-      <div class="feat-reel">${reel(a)}</div>
-      <div class="feat-info">
+      <div class="feat-head">
         <span class="feat-eyebrow">★ Featured Pick · This week's top pick</span>
         <h3 class="feat-name" style="font-family:${a.title_font};">${nameLink(a)}</h3>
+      </div>
+      <div class="feat-reel">${reel(a)}</div>
+      <div class="feat-info">
         ${genreLabel(a)}
         ${trendText(a.stats)}
         ${a.bio ? `<p class="feat-bio">${esc(a.bio)}</p>` : ""}
@@ -150,9 +152,9 @@ function featuredCard(a) {
 function gridCard(a) {
   return `
     <div class="reel-card">
+      <h3 class="reel-name" style="font-family:${a.title_font};">${nameLink(a)}</h3>
       ${reel(a)}
       <div class="reel-info">
-        <h3 class="reel-name" style="font-family:${a.title_font};">${nameLink(a)}</h3>
         ${genreLabel(a)}
         ${trendText(a.stats)}
         ${a.bio ? `<p class="reel-bio">${esc(a.bio)}</p>` : ""}

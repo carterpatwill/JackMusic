@@ -177,6 +177,7 @@ a:hover { opacity: 0.8; }
 
 .feat { display: flex; gap: 40px; align-items: center; flex-wrap: wrap; background: #1F4024; color: #FFFBF1; border-radius: 24px; padding: 28px; margin-bottom: 36px; position: relative; overflow: hidden; }
 .feat::after { content: ""; position: absolute; right: -120px; top: -120px; width: 360px; height: 360px; border-radius: 50%; background: #4F9130; opacity: 0.35; filter: blur(60px); pointer-events: none; }
+.feat-head { position: relative; z-index: 1; flex: 1 0 100%; display: flex; flex-direction: column; gap: 10px; margin-bottom: -16px; }
 .feat-reel { position: relative; z-index: 1; max-width: 100%; min-width: 0; }
 .feat-reel .reel-window { box-shadow: 0 18px 40px rgba(0,0,0,0.35); border: none; }
 .feat-info { position: relative; z-index: 1; flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
@@ -203,7 +204,7 @@ a:hover { opacity: 0.8; }
 .reel-card { flex: 0 0 340px; max-width: 86vw; scroll-snap-align: start; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 0 0 18px 0; display: flex; flex-direction: column; overflow: hidden; }
 .reel-card .reel-window { width: 100%; border: none; border-radius: 0; border-bottom: 1px solid var(--line); }
 .reel-info { padding: 16px 18px 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-.reel-name { margin: 0; font-size: 34px; line-height: 1.05; color: var(--ink); }
+.reel-name { margin: 0; padding: 16px 18px 14px; font-size: 34px; line-height: 1.05; color: var(--ink); border-bottom: 1px solid var(--line); }
 .reel-card .genre-label { color: var(--muted); }
 .reel-card .text-links a { color: var(--accent); font-size: 14px; }
 
@@ -284,6 +285,7 @@ a:hover { opacity: 0.8; }
 /* Phones: keep the featured reel and contact email inside the screen. */
 @media (max-width: 560px) {
   .feat { padding: 16px; gap: 24px; border-radius: 20px; }
+  .feat-head { margin-bottom: -8px; }
   .feat-reel { width: 100%; }
   .feat-reel .reel-window { width: 100%; }
   .contact-card .email { max-width: 100%; font-size: 15px; padding: 12px 18px; overflow-wrap: anywhere; }

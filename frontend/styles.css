@@ -300,7 +300,8 @@ a:hover { opacity: 0.8; }
 .trend-toggle button[aria-pressed="true"] { background: var(--accent); color: #FFFBF1; }
 .trends-card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px 24px 16px; }
 .trends-chart { position: relative; height: 380px; }
-.trends-note { margin: 14px 0 0 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.trends-hint { margin: 12px 0 0 0; font-size: 14px; font-weight: 700; color: var(--accent); text-align: center; }
+.trends-note { margin: 10px 0 0 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
 .trends-empty { position: absolute; inset: 0; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); }
 .trends-empty[hidden] { display: none; }
 @media (max-width: 560px) {

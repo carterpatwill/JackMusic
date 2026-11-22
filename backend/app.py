@@ -122,12 +122,17 @@ def api_weeks():
 
 @app.get("/api/artist/{slug}")
 def api_artist(slug: str):
-    """The artist's homepage blurb, so profile pages show the same text
-    (edited in seed.py) without copying it into each page."""
+    """The artist's homepage blurb and latest stats (with the real
+    week-over-week trend), so profile pages show the same text and numbers
+    as the homepage without copying them into each page."""
     a = db.get_artist(slug)
     if not a:
         raise HTTPException(status_code=404, detail="Unknown artist.")
-    return {"slug": a["slug"], "name": a["name"], "bio": a.get("bio") or ""}
+    stats = next(
+        (x["stats"] for x in db.get_artists_for_week(a["week_of"]) if x["slug"] == slug),
+        None,
+    )
+    return {"slug": a["slug"], "name": a["name"], "bio": a.get("bio") or "", "stats": stats}
 
 
 @app.get("/api/artist/{slug}/spotify")

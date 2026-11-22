@@ -67,6 +67,11 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
   (publish date + current views; Topic channels fall back to search), Spotify
   release dates, and stored snapshots. YouTube gives no past view counts, so
   only the snapshot line is true growth over time.
+- `frontend/trends.js` — homepage "How They're Trending" chart: growth % over
+  time for each current artist, with 4 toggles (YouTube views, YouTube subs,
+  Instagram Reel views, Instagram followers), from saved snapshots
+  (`GET /api/trends`, DB only, no API calls). Instagram Reel views = sum of
+  views on recent Reels, saved per snapshot (`instagram.reel_views`).
 - `frontend/profile-blurb.js` — shows the artist's homepage blurb (seed.py
   `bio`, via `GET /api/artist/{slug}`) under "If you like" on each full
   profile. New profile pages need the `data-artist-blurb` slot + this script.

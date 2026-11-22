@@ -162,11 +162,13 @@ def refresh_week(week_of=None):
             except Exception as e:  # noqa: BLE001
                 entry["errors"].append(f"youtube: {e}")
 
-        # --- Instagram (follower count via Business Discovery) ---
-        ig_followers = None
+        # --- Instagram (follower count + total Reel views, from one profile
+        # fetch that is saved for 12 hours) ---
+        ig_followers = ig_views = None
         ig_user = instagram.username_from_url(ar["instagram_url"])
         if ig_user and instagram.configured():
             try:
+                ig_views = instagram.reel_views(ig_user)
                 ig_followers = instagram.followers(ig_user)
             except Exception as e:  # noqa: BLE001
                 entry["errors"].append(f"instagram: {e}")
@@ -174,9 +176,9 @@ def refresh_week(week_of=None):
         conn.execute(
             """INSERT INTO snapshots
                  (artist_id, captured_at, spotify_followers, spotify_popularity,
-                  youtube_subs, youtube_views, instagram_followers)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (ar["id"], now, followers, popularity, subs, views, ig_followers),
+                  youtube_subs, youtube_views, instagram_followers, instagram_views)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (ar["id"], now, followers, popularity, subs, views, ig_followers, ig_views),
         )
         entry.update(
             spotify_followers=followers,
@@ -184,6 +186,7 @@ def refresh_week(week_of=None):
             youtube_subs=subs,
             youtube_views=views,
             instagram_followers=ig_followers,
+            instagram_views=ig_views,
         )
         results.append(entry)
 

@@ -90,6 +90,23 @@
     <a href="/archive.html" class="see-prev">See Previous Weeks →</a>
   </div>
 
+  <!-- Trends: YouTube views over time for this week's artists -->
+  <div id="trends" class="wrap section">
+    <div class="trends-head" data-reveal>
+      <h2 class="heading" style="margin:0;">How They're Trending</h2>
+    </div>
+    <div class="trends-card" data-reveal>
+      <div class="trend-toggle" role="group" aria-label="Which stat to chart">
+        <button type="button" data-metric="youtube_views" aria-pressed="true">YouTube views</button>
+        <button type="button" data-metric="youtube_subs" aria-pressed="false">YouTube subscribers</button>
+        <button type="button" data-metric="instagram_views" aria-pressed="false">Instagram views</button>
+        <button type="button" data-metric="instagram_followers" aria-pressed="false">Instagram followers</button>
+      </div>
+      <div id="trends-chart" class="trends-chart"><canvas aria-label="Growth over time for this week's artists"></canvas><p class="trends-empty" hidden>No saved numbers for this yet.</p></div>
+      <p id="trends-note" class="trends-note"></p>
+    </div>
+  </div>
+
   <!-- Approach / Criteria -->
   <div id="approach" class="wrap section">
     <h2 class="heading" data-reveal style="margin-bottom:40px;">My Criteria</h2>
@@ -180,5 +197,6 @@
 </div>
 <script src="/app.js"></script>
 <script src="/scroll.js"></script>
+<script src="/trends.js" defer></script>
 </body>
 </html>

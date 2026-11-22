@@ -120,6 +120,13 @@ def api_weeks():
     return {"weeks": db.get_weeks()}
 
 
+@app.get("/api/trends")
+def api_trends(week: Optional[str] = None):
+    """Every artist's YouTube views over time (saved snapshots only)."""
+    week_of = None if (week in (None, "", "latest")) else week
+    return db.get_week_trends(week_of)
+
+
 @app.get("/api/artist/{slug}")
 def api_artist(slug: str):
     """The artist's homepage blurb and latest stats (with the real

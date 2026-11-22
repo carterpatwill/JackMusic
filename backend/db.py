@@ -117,7 +117,8 @@ CREATE TABLE IF NOT EXISTS snapshots (
     spotify_popularity INTEGER,
     youtube_subs       INTEGER,
     youtube_views      INTEGER,
-    instagram_followers INTEGER
+    instagram_followers INTEGER,
+    instagram_views    INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_artist ON snapshots(artist_id, captured_at);
@@ -172,6 +173,8 @@ def _migrate(conn):
     """Add columns introduced after a database was first created."""
     if "instagram_followers" not in _columns(conn, "snapshots"):
         conn.execute("ALTER TABLE snapshots ADD COLUMN instagram_followers INTEGER")
+    if "instagram_views" not in _columns(conn, "snapshots"):
+        conn.execute("ALTER TABLE snapshots ADD COLUMN instagram_views INTEGER")
     conn.commit()
 
 
@@ -394,6 +397,37 @@ def set_channel_id(artist_id, channel_id):
     conn.close()
 
 
+def get_week_trends(week_of=None):
+    """YouTube views + subscribers and Instagram Reel views + followers over
+    time for every artist in a week, oldest first, from the saved snapshots
+    only (no API calls). Powers the homepage chart."""
+    week_of = week_of or latest_week()
+    conn = connect()
+    artists = conn.execute(
+        "SELECT id, slug, name, is_featured FROM artists WHERE week_of = ? "
+        "ORDER BY sort_order ASC",
+        (week_of,),
+    ).fetchall()
+    out = []
+    for a in artists:
+        rows = conn.execute(
+            "SELECT captured_at, youtube_views, youtube_subs, instagram_views, "
+            "instagram_followers FROM snapshots WHERE artist_id = ? ORDER BY captured_at ASC",
+            (a["id"],),
+        ).fetchall()
+        points = [dict(r) for r in rows]
+        out.append(
+            {
+                "slug": a["slug"],
+                "name": a["name"],
+                "is_featured": bool(a["is_featured"]),
+                "points": points,
+            }
+        )
+    conn.close()
+    return {"week_of": week_of, "artists": out}
+
+
 def get_snapshots(artist_id):
     """Every stored snapshot for an artist, oldest first (for the growth line)."""
     conn = connect()
@@ -450,9 +484,7 @@ def pull_live():
     live = _PgConn(url)
     artists = live.execute("SELECT * FROM artists").fetchall()
     snaps = live.execute(
-        "SELECT a.slug, s.captured_at, s.spotify_followers, s.spotify_popularity, "
-        "s.youtube_subs, s.youtube_views, s.instagram_followers "
-        "FROM snapshots s JOIN artists a ON a.id = s.artist_id"
+        "SELECT a.slug, s.* FROM snapshots s JOIN artists a ON a.id = s.artist_id"
     ).fetchall()
     cache = live.execute("SELECT key, payload, fetched_at FROM api_cache").fetchall()
     live.close()
@@ -476,9 +508,11 @@ def pull_live():
     for s in snaps:
         local.execute(
             "INSERT INTO snapshots (artist_id, captured_at, spotify_followers, spotify_popularity, "
-            "youtube_subs, youtube_views, instagram_followers) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "youtube_subs, youtube_views, instagram_followers, instagram_views) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (ids[s["slug"]], s["captured_at"], s["spotify_followers"], s["spotify_popularity"],
-             s["youtube_subs"], s["youtube_views"], s["instagram_followers"]),
+             s["youtube_subs"], s["youtube_views"], s["instagram_followers"],
+             s.get("instagram_views")),
         )
     for c in cache:
         local.execute(

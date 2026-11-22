@@ -133,6 +133,15 @@ def followers(username):
     return data["business_discovery"].get("followers_count")
 
 
+def reel_views(username):
+    """Total views across the artist's recent Reels (Instagram only reports
+    views per Reel). Uses the saved profile when it's fresh, so a stats
+    refresh doesn't add calls beyond the regular 12-hour profile fetch."""
+    posts = profile(username).get("posts") or []
+    views = [p["views"] for p in posts if p.get("views") is not None]
+    return sum(views) if views else None
+
+
 # ------------------------------------------------------------ one-time setup --
 def _setup():
     """Exchange a short-lived Graph API Explorer token for a permanent Page

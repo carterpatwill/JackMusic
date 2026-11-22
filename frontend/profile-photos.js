@@ -3,8 +3,10 @@
 // release covers (each links to that release). Data comes from the server's
 // /api/artist/{slug}/spotify endpoint, so no Spotify keys touch the browser.
 // Usage: <script src="/profile-photos.js" data-slug="arze" defer></script>
+// Add data-skip="1" to leave out the first photo(s) in that order.
 (function () {
   const slug = document.currentScript && document.currentScript.dataset.slug;
+  const skip = Number(document.currentScript.dataset.skip) || 0;
   if (!slug) return;
 
   function fill(box, src, alt, href) {
@@ -43,7 +45,7 @@
       // Each placeholder sits inside a rounded square box; fill the box.
       const boxes = [...document.querySelectorAll(".ph-photo")].map((el) => el.parentElement);
       boxes.forEach((box, i) => {
-        const p = photos[i];
+        const p = photos[i + skip];
         if (p) fill(box, p.src, p.alt, p.href);
         else box.style.display = "none"; // not enough images: hide the empty box
       });

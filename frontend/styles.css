@@ -308,3 +308,8 @@ a:hover { opacity: 0.8; }
   .trends-card { padding: 16px 12px 12px; }
   .trends-chart { height: 300px; }
 }
+
+/* Spotify playlist */
+.playlist-sub { font-size: 18px; line-height: 1.6; color: var(--muted); margin: 0 0 20px 0; }
+.playlist-embed { max-width: 820px; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 30px rgba(44,52,32,0.14); }
+.playlist-embed iframe { display: block; border: 0; border-radius: 12px; }

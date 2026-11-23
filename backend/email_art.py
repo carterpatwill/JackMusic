@@ -30,7 +30,7 @@ HERO = "4f12d7bf223e102db5eb1f722bebd02e.jpg"
 BLACK = os.path.join(SYS_FONTS, "Arial Black.ttf")
 BOLD = os.path.join(SYS_FONTS, "Arial Bold.ttf")
 
-CREAM, GREEN_LIGHT = (255, 251, 241), (143, 174, 124)
+CREAM, GREEN_LIGHT = (255, 255, 255), (143, 174, 124)  # title white
 
 
 def _hex(c):
@@ -99,10 +99,22 @@ def name_image(text, title_font, color, out_path, ink_height=88, max_width=1000)
 
 def photo(src_name, out_path, width=1120):
     img = Image.open(os.path.join(ASSETS, src_name)).convert("RGB")
+    # Trim plain white borders (some exported photos have a white strip).
+    mask = img.convert("L").point(lambda v: 255 if v < 240 else 0)
+    box = mask.getbbox()
+    if box and (box[2] - box[0]) > img.width * 0.8 and (box[3] - box[1]) > img.height * 0.8:
+        img = img.crop(box)
     if img.width > width:
         img = img.resize((width, round(img.height * width / img.width)), Image.LANCZOS)
     img.save(out_path, "JPEG", quality=82, optimize=True, progressive=True)
-    return img.width // 2, img.height // 2
+    return img.width, img.height
+
+
+def fit(size, max_w=360, max_h=340):
+    """Display size for a photo: its own shape, no bigger than max_w x max_h."""
+    w, h = size
+    scale = min(max_w / w, max_h / h)
+    return round(w * scale), round(h * scale)
 
 
 def _center(draw, y, text, font, fill, width, spacing=0):
@@ -117,31 +129,30 @@ def _center(draw, y, text, font, fill, width, spacing=0):
 
 
 def banner(label, issue, out_path, w=1200, h=760):
-    """Header: the site's crowd photo, darkened and green-tinted, with the
-    title, tagline and a 'drop' stamp."""
+    """Header: the site's black-and-white crowd photo, kept bright, with a
+    dark fade at the bottom for the title, like the site's hero."""
     src = Image.open(os.path.join(ASSETS, HERO)).convert("RGB")
     scale = max(w / src.width, h / src.height)
     src = src.resize((round(src.width * scale), round(src.height * scale)), Image.LANCZOS)
     left, top = (src.width - w) // 2, (src.height - h) // 2
-    img = ImageEnhance.Brightness(src.crop((left, top, left + w, top + h))).enhance(0.55)
-    tint = Image.new("RGB", (w, h), (20, 48, 28))
-    img = Image.blend(img, tint, 0.35)
-    # Fade the bottom to near-black so the text reads.
-    fade = Image.linear_gradient("L").resize((w, h))
-    img = Image.composite(Image.new("RGB", (w, h), (14, 22, 14)), img, fade.point(lambda v: int(v * 0.85)))
+    img = src.crop((left, top, left + w, top + h))
+    img = ImageEnhance.Contrast(img).enhance(1.15)
+    img = ImageEnhance.Brightness(img).enhance(0.85)
+    # Dark fade over the lower half only, so the stage and lights stay visible.
+    fade = Image.linear_gradient("L").resize((w, h)).point(lambda v: max(0, int((v - 90) * 1.45)))
+    img = Image.composite(Image.new("RGB", (w, h), (8, 8, 8)), img, fade.point(lambda v: min(235, v)))
 
     d = ImageDraw.Draw(img)
-    stamp_font = ImageFont.truetype(BOLD, 26)
-    stamp = f"DROP {issue:03d}  ·  {label.upper()}"
-    sw = d.textlength(stamp, font=stamp_font) + 56
-    sx = (w - sw) / 2
-    d.rounded_rectangle((sx, 64, sx + sw, 118), radius=27, outline=GREEN_LIGHT, width=3)
-    _center(d, 76, stamp, stamp_font, GREEN_LIGHT, w)
+    small = ImageFont.truetype(BOLD, 24)
+    d.text((48, 44), f"DROP {issue:03d}", font=small, fill=CREAM)
+    wk = label.upper()
+    d.text((w - 48 - d.textlength(wk, font=small), 44), wk, font=small, fill=CREAM)
+    d.line((48, 84, w - 48, 84), fill=(255, 255, 255, 120), width=2)
 
-    title = ImageFont.truetype(BLACK, 118)
-    _center(d, h - 380, "QUIGLEY", title, CREAM, w, spacing=4)
-    _center(d, h - 250, "DISCOVERY", title, (122, 190, 104), w, spacing=4)
-    tag = ImageFont.truetype(_font_file("'Sorean'"), 46)
-    _center(d, h - 96, "Today's independents, tomorrow's superstars.", tag, (216, 210, 184), w)
+    title = ImageFont.truetype(BLACK, 112)
+    d.text((44, h - 205), "Quigley", font=title, fill=CREAM, anchor="ls")
+    d.text((44, h - 100), "Discovery", font=title, fill=CREAM, anchor="ls")
+    tag = ImageFont.truetype(_font_file("'Sorean'"), 38)
+    d.text((50, h - 42), "Today's independents, tomorrow's superstars.", font=tag, fill=(215, 215, 215), anchor="ls")
     img.save(out_path, "JPEG", quality=84, optimize=True, progressive=True)
     return w // 2, h // 2

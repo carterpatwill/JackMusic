@@ -16,6 +16,7 @@ inline styles, and anything that needs a custom font is an image.
 Needs Pillow locally (pip install pillow); see backend/email_art.py.
 """
 
+import glob
 import html
 import os
 import sys
@@ -29,8 +30,10 @@ ROOT = os.path.dirname(os.path.dirname(__file__))
 OUT_DIR = os.path.join(ROOT, "emails")
 
 # Colors (frontend/styles.css), plus the darker "stage" greens of the email.
-BG, CARD, INK, MUTED, ACCENT, LINE = "#F5EFDC", "#FFFBF1", "#2C3420", "#5B6246", "#2F5D3A", "#E2DCC8"
-DEEP, DEEP_2, DEEP_3, SAGE, GOLD = "#16241A", "#1F3A26", "#2A4A32", "#8FAE7C", "#D9A520"
+# Black and white with neutral greys (no cream).
+BG, CARD, INK, MUTED, ACCENT, LINE = "#EFEFEF", "#FFFFFF", "#141414", "#6B6B6B", "#111111", "#E2E2E2"
+DEEP, DEEP_2, DEEP_3, SAGE, GOLD = "#111111", "#111111", "#2B2B2B", "#B8B8B8", "#FFFFFF"
+MUTED_LIGHT = "#B8B8B8"  # quiet text on the black boxes
 FONT = "Arial, Helvetica, sans-serif"
 HEAVY = "'Arial Black', Arial, Helvetica, sans-serif"
 
@@ -98,7 +101,7 @@ class Email:
             items.append((f"{'↑ +' if pct >= 0 else '↓ '}{pct:.1f}%", "views this week"))
         if not items:
             return ""
-        bg, num, lab = (DEEP_3, CARD, SAGE) if dark else ("#F0EAD6", INK, MUTED)
+        bg, num, lab = (DEEP_3, CARD, SAGE) if dark else ("#F0F0F0", INK, MUTED)
         cells = "".join(
             f'<div style="display:inline-block;vertical-align:top;background:{bg};border-radius:10px;'
             f'padding:9px 13px;margin:0 6px 6px 0;">'
@@ -109,7 +112,7 @@ class Email:
         return f'<div style="margin:16px 0 4px 0;">{cells}</div>'
 
     def tag(self, a, dark):
-        bg, fg = (DEEP_3, SAGE) if dark else (a["tag_bg"], a["tag_color"])
+        bg, fg = (DEEP_3, SAGE) if dark else ("#EAEAEA", INK)
         return (f'<span style="display:inline-block;background:{esc(bg)};color:{esc(fg)};font-family:{FONT};'
                 f'font-size:11px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase;'
                 f'padding:5px 11px;border-radius:999px;">{esc(a["tag"])}</span>')
@@ -117,9 +120,9 @@ class Email:
     # ---- sections --------------------------------------------------------
     def artist(self, a, n, featured):
         dark = featured
-        bg, text, num_color = (DEEP_2, "#E9E3CF", SAGE) if dark else (CARD, INK, a["tag_color"])
+        bg, text, num_color = (DEEP_2, "#E8E8E8", SAGE) if dark else (CARD, INK, INK)
         border = "" if dark else f"border:1px solid {LINE};"
-        strip = "" if dark else (f'<tr><td style="height:8px;line-height:8px;font-size:0;background:{esc(a["tag_color"])};'
+        strip = "" if dark else (f'<tr><td style="height:8px;line-height:8px;font-size:0;background:{INK};'
                                  f'border-radius:16px 16px 0 0;">&nbsp;</td></tr>')
         pick = (f'<td align="right" style="vertical-align:middle;"><span style="display:inline-block;background:{GOLD};'
                 f'color:{DEEP};font-family:{FONT};font-size:11px;font-weight:bold;letter-spacing:.12em;'
@@ -128,9 +131,10 @@ class Email:
         profile = esc(self.url(a["profile_href"]))
         photo = ""
         if a.get("_photo"):
+            pw, ph = a["_photo_size"]
             photo = (f'<a href="{profile}"><img src="{esc(self.img(a["_photo"]))}" '
-                     f'width="556" alt="{esc(a["name"])}" style="display:block;width:100%;max-width:556px;'
-                     f'height:auto;border:0;border-radius:12px;margin:16px 0 0 0;"></a>')
+                     f'width="{pw}" height="{ph}" alt="{esc(a["name"])}" style="display:block;width:{pw}px;'
+                     f'max-width:100%;height:auto;border:0;border-radius:12px;margin:16px 0 0 0;"></a>')
         return f"""
 <tr><td style="padding:0 0 22px 0;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
@@ -154,20 +158,20 @@ class Email:
 </td></tr>"""
 
     def tracklist(self, artists):
-        cell = "padding:11px 0;border-top:1px dashed #3A5440;"
+        cell = "padding:11px 0;border-top:1px dashed #333333;"
         rows = "".join(
-            f'<tr><td style="{cell}font-family:{HEAVY};font-size:13px;color:{SAGE};width:40px;">{i:02d}</td>'
+            f'<tr><td style="{cell}font-family:{HEAVY};font-size:13px;color:{MUTED_LIGHT};width:40px;">{i:02d}</td>'
             f'<td style="{cell}"><a href="{esc(self.url(a["profile_href"]))}" '
             f'style="font-family:{HEAVY};font-size:17px;color:{CARD};text-decoration:none;">{esc(a["name"])}</a></td>'
-            f'<td align="right" style="{cell}font-family:{FONT};font-size:12px;color:#A9B39A;">{esc(a["tag"])}</td></tr>'
+            f'<td align="right" style="{cell}font-family:{FONT};font-size:12px;color:#A3A3A3;">{esc(a["tag"])}</td></tr>'
             for i, a in enumerate(artists, 1))
         return f"""
 <tr><td style="padding:0 0 26px 0;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{DEEP};border-radius:16px;">
     <tr><td style="padding:20px 22px 10px 22px;">
-      <div style="font-family:{FONT};font-size:12px;font-weight:bold;letter-spacing:.2em;color:{SAGE};margin-bottom:10px;">IN THIS DROP</div>
+      <div style="font-family:{FONT};font-size:12px;font-weight:bold;letter-spacing:.2em;color:{MUTED_LIGHT};margin-bottom:10px;">IN THIS DROP</div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">{rows}</table>
-      <div style="padding:14px 0 10px 0;border-top:1px dashed #3A5440;">{self.button(PLAYLIST, "▶ Play the playlist on Spotify", DEEP, "#8FD16F")}</div>
+      <div style="padding:14px 0 10px 0;border-top:1px dashed #333333;">{self.button(PLAYLIST, "▶ Play the playlist on Spotify", DEEP, CARD)}</div>
     </td></tr>
   </table>
 </td></tr>"""
@@ -180,7 +184,7 @@ class Email:
 <tr><td style="padding:28px 6px 26px 6px;">
   {body}
   <p style="font-family:{HEAVY};font-size:26px;line-height:1.25;color:{ACCENT};margin:20px 0 0 0;
-            padding:2px 0 2px 16px;border-left:6px solid #267D1D;">{esc(quote)}</p>
+            padding:2px 0 2px 16px;border-left:6px solid {INK};">{esc(quote)}</p>
 </td></tr>"""
 
     def render(self, artists, label, subject, preheader):
@@ -219,12 +223,12 @@ class Email:
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{DEEP};border-radius:16px;">
         <tr><td align="center" style="padding:30px 22px 22px 22px;">
           <div style="font-family:{HEAVY};font-size:22px;line-height:1.3;color:{CARD};">Watch them grow.</div>
-          <p style="font-family:{FONT};font-size:15px;line-height:1.6;color:#C9C3AE;margin:10px 0 18px 0;">
+          <p style="font-family:{FONT};font-size:15px;line-height:1.6;color:#C8C8C8;margin:10px 0 18px 0;">
             Every artist's YouTube and Instagram numbers are tracked week over week on the site.</p>
-          {self.button(PLAYLIST, "Play the playlist on Spotify", DEEP_2, "#8FD16F")}<br>
-          {self.button("/#trends", "See the charts →", DEEP_2, CARD)}
+          {self.button(PLAYLIST, "▶ Play the playlist on Spotify", DEEP, CARD)}<br>
+          {self.button("/#trends", "See the charts →", CARD, "transparent", CARD)}
           {self.button("/archive.html", "Previous weeks", CARD, "transparent", CARD)}
-          <p style="font-family:{FONT};font-size:14px;line-height:1.6;color:{SAGE};margin:14px 0 0 0;">
+          <p style="font-family:{FONT};font-size:14px;line-height:1.6;color:{MUTED_LIGHT};margin:14px 0 0 0;">
             Know someone who'd love these artists? Forward this email.</p>
         </td></tr>
       </table>
@@ -277,9 +281,13 @@ def build(week_of=None):
         a["_name_size"] = email_art.name_image(
             a["name"], a["title_font"], color, os.path.join(art_dir, a["_name"]),
             ink_height=104 if a["is_featured"] else 80)
-        if a["card_photo"]:
+        # Email photo: assets/email-photos/<slug>.* if there is one, else the site card photo.
+        override = next(iter(sorted(glob.glob(os.path.join(ROOT, "assets", "email-photos", a["slug"] + ".*")))), None)
+        src = os.path.relpath(override, os.path.join(ROOT, "assets")) if override else (
+            os.path.basename(a["card_photo"]) if a["card_photo"] else None)
+        if src:
             a["_photo"] = f"photo-{a['slug']}.jpg"
-            email_art.photo(os.path.basename(a["card_photo"]), os.path.join(art_dir, a["_photo"]))
+            a["_photo_size"] = email_art.fit(email_art.photo(src, os.path.join(art_dir, a["_photo"])))
 
     top = next((a["name"] for a in artists if a["is_featured"]), artists[0]["name"] if artists else "")
     subject = f"This week's 5: {top} + 4 more independent artists"

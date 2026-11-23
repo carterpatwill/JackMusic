@@ -91,16 +91,16 @@
               const step = Math.ceil(ticks.length / fit);
               axis.ticks = ticks.filter((_, i) => i % step === 0);
             },
-            ticks: { callback: (v) => day(v), color: "#5B6246", maxRotation: 0 },
+            ticks: { callback: (v) => day(v), color: "#6B6B6B", maxRotation: 0 },
             grid: { display: false },
           },
           y: {
-            ticks: { callback: (v) => (v > 0 ? "+" : "") + parseFloat(Number(v).toFixed(2)) + "%", color: "#5B6246" },
-            grid: { color: "rgba(44,52,32,0.08)" },
+            ticks: { callback: (v) => (v > 0 ? "+" : "") + parseFloat(Number(v).toFixed(2)) + "%", color: "#6B6B6B" },
+            grid: { color: "rgba(20,20,20,0.08)" },
           },
         },
         plugins: {
-          legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8, padding: 18, color: "#2C3420", font: { weight: "600" } } },
+          legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8, padding: 18, color: "#141414", font: { weight: "600" } } },
           tooltip: {
             callbacks: {
               title: (items) => (items.length ? day(items[0].parsed.x) : ""),

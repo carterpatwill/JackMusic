@@ -54,7 +54,7 @@ function socials(a) {
 
 function actions(a) {
   const spotify = a.spotify_url
-    ? `<a class="listen" href="${esc(a.spotify_url)}" target="_blank" rel="noopener"><svg width="10" height="10" viewBox="0 0 24 24" fill="#FFFBF1"><path d="M8 5v14l11-7z"></path></svg>Listen Now</a>`
+    ? `<a class="listen" href="${esc(a.spotify_url)}" target="_blank" rel="noopener"><svg width="10" height="10" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M8 5v14l11-7z"></path></svg>Listen Now</a>`
     : "";
   const invest = a.invest_href
     ? `<a class="invest" href="${esc(a.invest_href)}">Invest →</a>`
@@ -106,7 +106,7 @@ function trendText(stats) {
 
 function buttons(a) {
   const spotify = a.spotify_url
-    ? `<a class="listen" href="${esc(a.spotify_url)}" target="_blank" rel="noopener"><svg width="10" height="10" viewBox="0 0 24 24" fill="#FFFBF1"><path d="M8 5v14l11-7z"></path></svg>Listen Now</a>`
+    ? `<a class="listen" href="${esc(a.spotify_url)}" target="_blank" rel="noopener"><svg width="10" height="10" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M8 5v14l11-7z"></path></svg>Listen Now</a>`
     : "";
   const invest = a.invest_href ? `<a class="invest" href="${esc(a.invest_href)}">Invest →</a>` : "";
   return `<div class="actions">${spotify}${invest}</div>`;

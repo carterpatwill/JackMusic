@@ -89,6 +89,12 @@ Browser ──POST /api/refresh─> FastAPI ──> refresh.py ──> Spotify +
 - `frontend/archive.html` — "See Previous Weeks": every published week from
   `/api/weeks` + `/api/artists?week=`, as a plain text list (newest week
   first, no photos) with a "Sound" genre dropdown.
+- `backend/email_draft.py` + `backend/email_art.py` — the weekly mailing-list
+  email (`.venv/bin/python -m backend.email_draft`, needs Pillow locally).
+  Draws the header and artist names (in their own fonts) as images into
+  `frontend/email/<week>/` (push before sending; also the "view in browser"
+  page) and writes `emails/week-<week>.html` to paste into a Kit broadcast.
+  Sends nothing. Intro text is `INTRO` in email_draft.py.
 - `frontend/styles.css` — design tokens in `:root`; `--accent` drives theme.
 
 ## Conventions

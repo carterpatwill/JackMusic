@@ -11,8 +11,8 @@ the archive (/archive.html). (`--reseed` wipes every week; avoid it once there
 is history you want to keep.)
 """
 
-CURRENT_WEEK = "2026-11-16"
-CURRENT_WEEK_LABEL = "Week of Nov 16, 2026"
+CURRENT_WEEK = "2026-11-23"
+CURRENT_WEEK_LABEL = "Week of Nov 23, 2026"
 
 # Site-level brand images (not tied to one artist)
 HERO_IMAGE = "4f12d7bf223e102db5eb1f722bebd02e.jpg"

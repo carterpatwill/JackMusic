@@ -34,6 +34,8 @@ OUT_DIR = os.path.join(ROOT, "emails")
 BG, CARD, INK, MUTED, ACCENT, LINE = "#EFEFEF", "#FFFFFF", "#141414", "#6B6B6B", "#111111", "#E2E2E2"
 DEEP, DEEP_2, DEEP_3, SAGE, GOLD = "#111111", "#111111", "#2B2B2B", "#B8B8B8", "#FFFFFF"
 MUTED_LIGHT = "#B8B8B8"  # quiet text on the black boxes
+# Where to crop the profile photos to squares (x, y; 0.5 = centre), matching the site.
+PHOTO_FOCUS = {"tomb-1": (1.0, 0.5), "tomb-2": (0.72, 0.5), "ian-bolen-1": (0.5, 0.3), "ian-bolen-3": (0.5, 0.3)}
 FONT = "Arial, Helvetica, sans-serif"
 HEAVY = "'Arial Black', Arial, Helvetica, sans-serif"
 
@@ -281,7 +283,16 @@ def build(week_of=None):
         a["_name_size"] = email_art.name_image(
             a["name"], a["title_font"], color, os.path.join(art_dir, a["_name"]),
             ink_height=104 if a["is_featured"] else 80)
-        # Email photo: assets/email-photos/<slug>.* if there is one, else the site card photo.
+        # The profile pages' photos (assets/profile-photos/<slug>-1..3.jpg) as one row.
+        # Otherwise one photo: assets/email-photos/<slug>.* if there is one, else the card photo.
+        gallery = sorted(glob.glob(os.path.join(ROOT, "assets", "profile-photos", a["slug"] + "-*.jpg")))
+        if gallery:
+            a["_photo"] = f"photos-{a['slug']}.jpg"
+            srcs = [os.path.relpath(p, os.path.join(ROOT, "assets")) for p in gallery[:3]]
+            a["_photo_size"] = email_art.strip(
+                srcs, os.path.join(art_dir, a["_photo"]), DEEP_2 if a["is_featured"] else CARD,
+                focus={f"profile-photos/{k}.jpg": v for k, v in PHOTO_FOCUS.items()})
+            continue
         override = next(iter(sorted(glob.glob(os.path.join(ROOT, "assets", "email-photos", a["slug"] + ".*")))), None)
         src = os.path.relpath(override, os.path.join(ROOT, "assets")) if override else (
             os.path.basename(a["card_photo"]) if a["card_photo"] else None)

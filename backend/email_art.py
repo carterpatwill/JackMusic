@@ -117,6 +117,33 @@ def fit(size, max_w=360, max_h=340):
     return round(w * scale), round(h * scale)
 
 
+def _square(img, fx=0.5, fy=0.5):
+    """Square crop; fx/fy say where to centre it (0 = left/top, 1 = right/bottom)."""
+    s = min(img.size)
+    left = round((img.width - s) * fx)
+    top = round((img.height - s) * fy)
+    return img.crop((left, top, left + s, top + s))
+
+
+def strip(srcs, out_path, bg, width=1112, gap=25, radius=24, focus=None):
+    """The profile photos side by side as one image: rounded squares on the
+    card's own background colour (email apps can't crop or round images
+    reliably, so it's baked in). Returns the 1x display size."""
+    focus = focus or {}
+    n = len(srcs)
+    s = (width - gap * (n - 1)) // n
+    width = s * n + gap * (n - 1)
+    canvas = Image.new("RGB", (width, s), _hex(bg))
+    mask = Image.new("L", (s, s), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, s - 1, s - 1), radius=radius, fill=255)
+    for i, src in enumerate(srcs):
+        img = Image.open(os.path.join(ASSETS, src)).convert("RGB")
+        img = _square(img, *focus.get(src, (0.5, 0.5))).resize((s, s), Image.LANCZOS)
+        canvas.paste(img, (i * (s + gap), 0), mask)
+    canvas.save(out_path, "JPEG", quality=84, optimize=True, progressive=True)
+    return width // 2, s // 2
+
+
 def _center(draw, y, text, font, fill, width, spacing=0):
     if spacing:
         widths = [draw.textlength(ch, font=font) for ch in text]
